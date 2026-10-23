@@ -20,6 +20,7 @@
   --text: #e9edef;
 }
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }
 html, body { height: 100%; margin: 0; }
 body {
   font-family: -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
@@ -279,7 +280,7 @@ body {
 // The Matrix/Win98 UI and every feature are the real thing; only the shared
 // backend is swapped out for on-device storage.
 const $ = (s) => document.querySelector(s);
-const $ = (s) => document.querySelectorAll(s);
+const $$ = (s) => document.querySelectorAll(s);
 const PASSPHRASE = 'all risk uniforms';
 const ADMIN_PHONE = '5307206113';
 const KEY = 'aru_demo_v1';
@@ -372,9 +373,9 @@ function enterApp() {
 }
 
 // ── Tabs ─────────────────────────────────────────────────────────────────────
-$('.tab').forEach((t) => t.onclick = () => {
-  $('.tab').forEach((x) => x.classList.remove('active'));
-  $('.view').forEach((x) => x.classList.remove('active'));
+$$('.tab').forEach((t) => t.onclick = () => {
+  $$('.tab').forEach((x) => x.classList.remove('active'));
+  $$('.view').forEach((x) => x.classList.remove('active'));
   t.classList.add('active');
   $('#view-' + t.dataset.view).classList.add('active');
   if (t.dataset.view === 'chat') markRead();

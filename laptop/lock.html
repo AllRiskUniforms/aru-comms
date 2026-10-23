@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#000000" />
+  <title>ARU 98</title>
+  <style>
+:root {
+  --green: #00ff5f;
+  --w98-face: #c0c0c0;
+  --w98-shadow: #808080;
+  --w98-dark: #000;
+  --w98-light: #fff;
+  --w98-blue: #000080;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; }
+body { background: #000; color: var(--green); overflow: hidden; cursor: default; user-select: none; }
+#matrix { position: fixed; inset: 0; z-index: 0; display: block; }
+.stage { position: fixed; inset: 0; z-index: 1; display: flex; align-items: center; justify-content: center; padding: 16px; }
+.stage[hidden] { display: none; }
+
+/* ── Boot / loading ────────────────────────────────────────────────────────── */
+#boot { background: rgba(0,0,0,0.55); flex-direction: column; font-family: "Lucida Console", Consolas, "Courier New", monospace; }
+#boot-text { font-size: clamp(18px, 3vw, 34px); min-height: 1.4em; text-shadow: 0 0 8px var(--green); white-space: pre; }
+#boot-text::after { content: "█"; animation: blink 1s steps(1) infinite; margin-left: 2px; }
+@keyframes blink { 50% { opacity: 0; } }
+#loading { margin-top: 28px; width: min(560px, 90vw); font-size: 14px; }
+#loading[hidden] { display: none; }
+#load-log { white-space: pre; line-height: 1.5; min-height: 6em; opacity: 0.85; }
+.bar { border: 1px solid var(--green); height: 18px; padding: 2px; margin-top: 8px; box-shadow: 0 0 8px #00ff5f55; }
+.bar > div { height: 100%; width: 0; background: repeating-linear-gradient(90deg, var(--green) 0 10px, transparent 10px 12px); }
+.skip { position: fixed; bottom: 14px; right: 18px; font-size: 12px; opacity: 0.5; }
+
+/* ── Windows 98 logon dialog ───────────────────────────────────────────────── */
+.win98 {
+  background: var(--w98-face); color: #000;
+  border: 2px solid; border-color: var(--w98-light) var(--w98-dark) var(--w98-dark) var(--w98-light);
+  box-shadow: inset -1px -1px 0 var(--w98-shadow), inset 1px 1px 0 #dfdfdf, 4px 4px 0 #0008;
+  font-family: Tahoma, "Microsoft Sans Serif", "MS Sans Serif", Geneva, sans-serif; font-size: 12px;
+  padding: 2px;
+}
+.title-bar {
+  background: linear-gradient(90deg, var(--w98-blue), #1084d0);
+  color: #fff; display: flex; align-items: center; justify-content: space-between;
+  padding: 2px 3px 2px 5px; font-weight: bold; height: 20px;
+}
+.title-bar-controls { display: flex; gap: 2px; }
+.title-bar-controls span {
+  width: 16px; height: 14px; background: var(--w98-face); color: #000;
+  border: 1px solid; border-color: var(--w98-light) var(--w98-dark) var(--w98-dark) var(--w98-light);
+  box-shadow: inset -1px -1px 0 var(--w98-shadow);
+  font: bold 10px/11px Tahoma, sans-serif; text-align: center;
+}
+#logon { width: 420px; max-width: 100%; }
+.logon-body { display: flex; gap: 14px; padding: 16px 12px 12px; }
+.logon-body .icon { flex: none; padding-top: 2px; }
+.logon-main { flex: 1; min-width: 0; }
+.logon-main p { margin: 0 0 14px; }
+.field { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.field label { width: 72px; flex: none; }
+.field label u { text-decoration: underline; }
+.field input {
+  flex: 1; min-width: 0; height: 21px; padding: 2px 4px; font: inherit; color: #000; background: #fff;
+  border: 2px solid; border-color: var(--w98-shadow) var(--w98-light) var(--w98-light) var(--w98-shadow);
+  box-shadow: inset 1px 1px 0 var(--w98-dark); outline: none;
+}
+.buttons { display: flex; flex-direction: column; gap: 6px; padding-top: 1px; }
+.w98btn {
+  min-width: 75px; height: 23px; font: inherit; color: #000; cursor: pointer; background: var(--w98-face);
+  border: 2px solid; border-color: var(--w98-light) var(--w98-dark) var(--w98-dark) var(--w98-light);
+  box-shadow: inset -1px -1px 0 var(--w98-shadow);
+}
+.w98btn.default { outline: 1px solid #000; outline-offset: 0; }
+.w98btn:active { border-color: var(--w98-dark) var(--w98-light) var(--w98-light) var(--w98-dark); box-shadow: inset 1px 1px 0 var(--w98-shadow); }
+.w98btn:focus-visible { outline: 1px dotted #000; outline-offset: -5px; }
+.shake { animation: shake 0.35s; }
+@keyframes shake { 20%, 60% { transform: translateX(-8px); } 40%, 80% { transform: translateX(8px); } }
+
+#granted { font-family: "Lucida Console", Consolas, monospace; font-size: clamp(28px, 6vw, 72px); letter-spacing: 6px; text-shadow: 0 0 16px var(--green); background: rgba(0,0,0,0.6); }
+
+/* ── Nedry ─────────────────────────────────────────────────────────────────── */
+#nedry { z-index: 5; background: #000; }
+#magic {
+  position: absolute; inset: 0; margin: 0; padding: 12px 16px; overflow: hidden;
+  font: 16px/1.25 "Lucida Console", Consolas, "Courier New", monospace; color: #e8e8e8;
+  display: flex; flex-direction: column; justify-content: flex-end; white-space: pre;
+}
+#nedry-win { position: relative; width: min(520px, 92vw); }
+#nedry-screen { background: #000; display: flex; align-items: center; justify-content: center; aspect-ratio: 4 / 3; overflow: hidden; border: 2px solid; border-color: var(--w98-shadow) var(--w98-light) var(--w98-light) var(--w98-shadow); }
+#nedry-screen video, #nedry-screen img { width: 100%; height: 100%; object-fit: contain; display: block; }
+.finger { font-size: 150px; line-height: 1; display: inline-block; transform-origin: 50% 90%; animation: wag 0.45s ease-in-out infinite alternate; }
+@keyframes wag { from { transform: rotate(-22deg); } to { transform: rotate(22deg); } }
+.ahah { color: #fff; font: bold 28px "Lucida Console", Consolas, monospace; text-align: center; margin-top: 8px; }
+#nedry-hint { position: absolute; bottom: 16px; left: 0; right: 0; text-align: center; color: #9a9a9a; font: 13px Tahoma, sans-serif; }
+  </style>
+</head>
+<body>
+  <canvas id="matrix"></canvas>
+
+  <!-- 1. Matrix boot sequence -->
+  <div id="boot" class="stage">
+    <div id="boot-text"></div>
+    <div id="loading" hidden>
+      <div id="load-log"></div>
+      <div class="bar"><div id="load-bar"></div></div>
+    </div>
+    <div class="skip">press any key to skip</div>
+  </div>
+
+  <!-- 2. Windows 98 style logon -->
+  <div id="dialog" class="stage" hidden>
+    <form id="logon" class="win98" autocomplete="off">
+      <div class="title-bar">
+        <span>Welcome to ARU 98</span>
+        <span class="title-bar-controls"><span>?</span><span>×</span></span>
+      </div>
+      <div class="logon-body">
+        <div class="icon" id="key-icon"></div>
+        <div class="logon-main">
+          <p>Type your password to log on to ARU 98.</p>
+          <div class="field"><label for="user"><u>U</u>ser name:</label><input id="user" value="ARU" spellcheck="false" /></div>
+          <div class="field"><label for="pass"><u>P</u>assword:</label><input id="pass" type="password" spellcheck="false" /></div>
+        </div>
+        <div class="buttons">
+          <button class="w98btn default" type="submit">OK</button>
+          <button class="w98btn" type="button" id="cancel">Cancel</button>
+        </div>
+      </div>
+    </form>
+  </div>
+
+  <div id="granted" class="stage" hidden>ACCESS GRANTED</div>
+
+  <!-- 3. Wrong password -->
+  <div id="nedry" class="stage" hidden>
+    <pre id="magic"></pre>
+    <div id="nedry-win" class="win98">
+      <div class="title-bar"><span>nedry</span><span class="title-bar-controls"><span>×</span></span></div>
+      <div id="nedry-screen"></div>
+    </div>
+    <div id="nedry-hint" hidden>press any key to try again</div>
+  </div>
+
+  <script>
+// ARU 98 lock screen for the always-on home laptop. Matrix boot sequence, then a
+// Windows-98 style logon. A wrong password plays the Nedry clip.
+//
+// The password is stored as a salted SHA-256 hash so it isn't readable in this
+// public repo. To change it, see laptop/README.md.
+const SALT = 'aru98:';
+const PASS_HASH = 'fbecb728c065179d7e7cf1cff938e2397946fab476987bfb372d441b1a507ba3';
+const APP_URL = '../index.html';
+// Drop any of these next to this file to use your own clip; first one found wins.
+const NEDRY_CLIPS = ['nedry.mp4', 'nedry.webm', 'nedry.gif'];
+
+const $ = (s) => document.querySelector(s);
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+// ── Matrix rain ──────────────────────────────────────────────────────────────
+(function () {
+  const canvas = $('#matrix');
+  const ctx = canvas.getContext('2d');
+  const glyphs = '01ARU98ﾊﾐﾋｰｳｼﾅﾓﾆｻﾜｵﾘｱﾎﾃﾏｹﾒｴｶｷﾑﾕﾗｾﾈｽﾀﾇﾍ0123456789:.=*+-<>'.split('');
+  let drops, fontSize;
+
+  function resize() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    fontSize = Math.max(14, Math.floor(window.innerWidth / 70));
+    drops = new Array(Math.floor(canvas.width / fontSize)).fill(0).map(() => Math.random() * -60);
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  setInterval(() => {
+    ctx.fillStyle = 'rgba(0,0,0,0.07)';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.font = fontSize + 'px monospace';
+    for (let i = 0; i < drops.length; i++) {
+      const ch = glyphs[(Math.random() * glyphs.length) | 0];
+      ctx.fillStyle = Math.random() > 0.97 ? '#cfffdf' : '#00ff5f';
+      ctx.fillText(ch, i * fontSize, drops[i] * fontSize);
+      if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) drops[i] = 0;
+      drops[i]++;
+    }
+  }, 50);
+})();
+
+// ── Boot sequence ────────────────────────────────────────────────────────────
+let skipBoot = false;
+async function typeLine(text, hold) {
+  const el = $('#boot-text');
+  el.textContent = '';
+  for (const ch of text) {
+    if (skipBoot) return;
+    el.textContent += ch;
+    await sleep(ch === '.' ? 160 : 70 + Math.random() * 60);
+  }
+  for (let t = 0; t < hold && !skipBoot; t += 50) await sleep(50);
+}
+
+async function boot() {
+  for (const [line, hold] of [['Wake up, ARU...', 1400], ['The Matrix has you...', 1400], ['Follow the white rabbit.', 1200], ['Knock, knock.', 900]]) {
+    await typeLine(line, hold);
+    if (skipBoot) break;
+  }
+  if (!skipBoot) {
+    $('#boot-text').textContent = 'LOADING ARU 98';
+    $('#loading').hidden = false;
+    const steps = ['> mounting /dev/aru ........ OK', '> decrypting comms channel ... OK', '> syncing crew roster ....... OK', '> bypassing Nedry ........... ??'];
+    for (let p = 0; p <= 100 && !skipBoot; p += 2) {
+      $('#load-bar').style.width = p + '%';
+      const shown = Math.floor((p / 100) * steps.length);
+      $('#load-log').textContent = steps.slice(0, shown).join('\n');
+      await sleep(45);
+    }
+  }
+  showDialog();
+}
+
+function onSkip() { skipBoot = true; }
+window.addEventListener('keydown', onSkip, { once: true });
+window.addEventListener('pointerdown', onSkip, { once: true });
+
+// ── Logon dialog ─────────────────────────────────────────────────────────────
+function pixelIcon(rows, palette, scale) {
+  let rects = '';
+  rows.forEach((row, y) => [...row].forEach((c, x) => {
+    if (palette[c]) rects += `<rect x="${x}" y="${y}" width="1" height="1" fill="${palette[c]}"/>`;
+  }));
+  return `<svg viewBox="0 0 ${rows[0].length} ${rows.length}" width="${rows[0].length * scale}" height="${rows.length * scale}" shape-rendering="crispEdges" aria-hidden="true">${rects}</svg>`;
+}
+$('#key-icon').innerHTML = pixelIcon([
+  '..#####.........',
+  '.#hhyyy#........',
+  '#hy###yo#.......',
+  '#y#...#yo#######',
+  '#y#...#yhhhhhhh#',
+  '#y#...#yyyyyyyo#',
+  '#yo###oo####y#y#',
+  '.#ooooo#...#o#o#',
+  '..#####....#####',
+], { '#': '#000', y: '#e0b030', h: '#fff2a0', o: '#8a6200' }, 3);
+
+let dialogShown = false;
+function showDialog() {
+  if (dialogShown) return;
+  dialogShown = true;
+  $('#boot').hidden = true;
+  $('#dialog').hidden = false;
+  $('#pass').focus();
+}
+
+async function sha256Hex(text) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+  return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+$('#logon').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  if (!$('#nedry').hidden) return;
+  const attempt = $('#pass').value.trim().toLowerCase();
+  if (await sha256Hex(SALT + attempt) === PASS_HASH) {
+    $('#dialog').hidden = true;
+    $('#granted').hidden = false;
+    await sleep(1200);
+    location.replace(APP_URL);
+  } else {
+    nedry();
+  }
+});
+$('#cancel').onclick = () => { $('#pass').value = ''; $('#pass').focus(); };
+
+// ── Nedry ────────────────────────────────────────────────────────────────────
+// Probe for a clip file once at load so a wrong password reacts instantly.
+let clip = null; // { kind: 'video' | 'img', src }
+(async function findClip() {
+  for (const src of NEDRY_CLIPS) {
+    const kind = src.endsWith('.gif') ? 'img' : 'video';
+    const ok = await new Promise((resolve) => {
+      const el = document.createElement(kind);
+      if (kind === 'video') { el.preload = 'metadata'; el.onloadedmetadata = () => resolve(true); } else el.onload = () => resolve(true);
+      el.onerror = () => resolve(false);
+      el.src = src;
+    });
+    if (ok) { clip = { kind, src }; return; }
+  }
+})();
+
+let nedryTimers = [];
+let speaking = false;
+
+function sayMagicWord() {
+  if (!('speechSynthesis' in window) || !speaking) return;
+  const u = new SpeechSynthesisUtterance('Ah ah ah! You didn\'t say the magic word!');
+  u.rate = 1.05; u.pitch = 1.3;
+  u.onend = () => nedryTimers.push(setTimeout(sayMagicWord, 600));
+  speechSynthesis.speak(u);
+}
+
+function nedry() {
+  const screen = $('#nedry-screen');
+  const magic = $('#magic');
+  screen.innerHTML = '';
+  magic.textContent = '';
+  $('#nedry').hidden = false;
+  $('#nedry-hint').hidden = true;
+  $('#pass').blur();
+
+  if (clip && clip.kind === 'video') {
+    const v = document.createElement('video');
+    v.src = clip.src; v.loop = true; v.playsInline = true;
+    screen.appendChild(v);
+    v.play().catch(() => { v.muted = true; v.play(); });
+  } else {
+    if (clip) {
+      const img = document.createElement('img');
+      img.src = clip.src; img.alt = '';
+      screen.appendChild(img);
+    } else {
+      screen.innerHTML = '<div><div class="finger">☝️</div><div class="ahah">Ah ah ah!</div></div>';
+    }
+    speaking = true;
+    sayMagicWord();
+  }
+
+  // The terminal from the movie: three denials, then the magic word forever.
+  const intro = ['> access main program', 'access: PERMISSION DENIED.', '> access security', 'access: PERMISSION DENIED.', '> access main security grid', 'access: PERMISSION DENIED....and....'];
+  let n = 0;
+  const lines = [];
+  nedryTimers.push(setInterval(() => {
+    lines.push(n < intro.length ? intro[n] : 'YOU DIDN\'T SAY THE MAGIC WORD!');
+    n++;
+    if (lines.length > 80) lines.shift();
+    magic.textContent = lines.join('\n');
+  }, 140));
+
+  nedryTimers.push(setTimeout(() => {
+    $('#nedry-hint').hidden = false;
+    window.addEventListener('keydown', closeNedry, { once: true });
+    window.addEventListener('pointerdown', closeNedry, { once: true });
+  }, 4000));
+}
+
+function closeNedry(e) {
+  if (e) e.preventDefault();
+  window.removeEventListener('keydown', closeNedry);
+  window.removeEventListener('pointerdown', closeNedry);
+  nedryTimers.forEach((t) => { clearTimeout(t); clearInterval(t); });
+  nedryTimers = [];
+  speaking = false;
+  if ('speechSynthesis' in window) speechSynthesis.cancel();
+  const v = $('#nedry-screen video');
+  if (v) v.pause();
+  $('#nedry-screen').innerHTML = '';
+  $('#nedry').hidden = true;
+  $('#pass').value = '';
+  const form = $('#logon');
+  form.classList.remove('shake'); void form.offsetWidth; form.classList.add('shake');
+  $('#pass').focus();
+}
+
+boot();
+  </script>
+</body>
+</html>
