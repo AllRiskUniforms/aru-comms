@@ -142,4 +142,12 @@ if ($retro) {
 } else {
   Write-Warning 'RetroBar is not installed. Install it with: winget install --id dremin.RetroBar -e'
 }
+
+Write-Host 'Windows 98 search box on the taskbar...'
+$lnk = $Shell.CreateShortcut((Join-Path ([Environment]::GetFolderPath('Startup')) 'ARU Search.lnk'))
+$lnk.TargetPath = "$env:WINDIR\System32\WindowsPowerShell\v1.0\powershell.exe"
+$lnk.Arguments = "-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File `"$(Join-Path $PSScriptRoot 'search-bar.ps1')`""
+$lnk.WindowStyle = 7
+$lnk.Save()
+Start-Process $lnk.TargetPath $lnk.Arguments -WindowStyle Hidden  # replaces any copy already running
 Write-Host 'Done. Right-click the taskbar > Properties to pick a different RetroBar theme.'

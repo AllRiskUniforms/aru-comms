@@ -215,7 +215,7 @@ async function typeLine(text, hold) {
 }
 
 async function boot() {
-  for (const [line, hold] of [['Wake up, ARU...', 1400], ['The Matrix has you...', 1400], ['Follow the white rabbit.', 1200], ['Knock, knock.', 900]]) {
+  for (const [line, hold] of [['Wake up, Tripp...', 1400], ['The Force has you...', 1400], ['Follow the pink rabbit.', 1200], ['Time to burn it all down.', 1400]]) {
     await typeLine(line, hold);
     if (skipBoot) break;
   }

@@ -76,6 +76,9 @@ The real Windows desktop, dressed as Windows 98, so every icon opens the real pr
   (right-click the taskbar → Properties for other themes), and the classic teal background.
 - **My Computer**, **My Documents**, **Recycle Bin**, **Network**, **ARU Comms**, and icons for
   Google Chrome, LightBurn, Claude, Spotify, Inkscape, PowerShell, Paint and Outlook.
+- A Windows 98 style **Search** box on the taskbar (`search-bar.ps1`): type, then pick a
+  program, "Search files" or "Search the web" with the arrow keys and Enter. Drag the grip
+  on its left to move it along the taskbar.
 - Window borders and the Start menu itself stay Windows 10/11.
 
 A program that isn't installed yet gets no icon. Install it, then run this again:
@@ -89,8 +92,8 @@ powershell -ExecutionPolicy Bypass -File "$env:USERPROFILE\ARU\aru-comms\laptop\
 On that computer, in PowerShell:
 
 ```powershell
-Remove-Item "$([Environment]::GetFolderPath('Startup'))\ARU 98.lnk", "$([Environment]::GetFolderPath('Startup'))\RetroBar.lnk", "$([Environment]::GetFolderPath('Desktop'))\ARU 98.lnk" -ErrorAction SilentlyContinue
-Get-CimInstance Win32_Process -Filter "Name = 'powershell.exe'" | Where-Object CommandLine -like '*lock-watch*' | ForEach-Object { Stop-Process -Id $_.ProcessId }
+Remove-Item "$([Environment]::GetFolderPath('Startup'))\ARU 98.lnk", "$([Environment]::GetFolderPath('Startup'))\RetroBar.lnk", "$([Environment]::GetFolderPath('Startup'))\ARU Search.lnk", "$([Environment]::GetFolderPath('Desktop'))\ARU 98.lnk" -ErrorAction SilentlyContinue
+Get-CimInstance Win32_Process -Filter "Name = 'powershell.exe'" | Where-Object { $_.CommandLine -like '*lock-watch*' -or $_.CommandLine -like '*search-bar*' } | ForEach-Object { Stop-Process -Id $_.ProcessId }
 powercfg /setacvalueindex SCHEME_CURRENT SUB_NONE CONSOLELOCK 1
 powercfg /setacvalueindex SCHEME_CURRENT SUB_BUTTONS LIDACTION 1
 powercfg /setactive SCHEME_CURRENT

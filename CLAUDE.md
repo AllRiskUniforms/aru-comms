@@ -37,6 +37,10 @@ This repo is **public**: never commit passwords, tokens or customer data.
   on Ferdinand by mistake; `laptop/README.md` has the undo.
 - `laptop/win98-desktop.ps1`: dresses the real desktop as Win98 (RetroBar, teal background,
   My Computer etc., program icons found via `Get-StartApps`). Re-runnable.
+- `laptop/search-bar.ps1`: a Win98-style search box (WinForms, classic visual styles) on
+  the RetroBar taskbar, which has none: Start-menu apps, Explorer file search, web search.
+  Started at sign-in by an "ARU Search" Startup shortcut; hides behind the lock and
+  full-screen windows; position in `%LOCALAPPDATA%\ARU98\search-bar.json`.
 - `laptop/start-kiosk.cmd`: run at sign-in (and by the desktop "ARU 98" icon).
   `git pull --ff-only`, then starts `lock-watch.ps1` hidden.
 - `laptop/lock-watch.ps1`: shows `lock.html` in Edge `--kiosk` (own profile,
