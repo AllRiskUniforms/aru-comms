@@ -76,6 +76,9 @@ The real Windows desktop, dressed as Windows 98, so every icon opens the real pr
   (right-click the taskbar → Properties for other themes), and the classic teal background.
 - **My Computer**, **My Documents**, **Recycle Bin**, **Network**, **ARU Comms**, and icons for
   Google Chrome, LightBurn, Claude, Spotify, Inkscape, PowerShell, Paint and Outlook.
+- A little **fire axe** mouse pointer at the smallest pointer size (`cursors/fire-axe.cur`, drawn
+  by `cursors/make-cursors.py`). To get the normal arrow back: Start → type `mouse pointer` →
+  Additional mouse settings → Pointers → Use Default.
 - A Windows 98 style **Search** box on the taskbar (`search-bar.ps1`): type, then pick a
   program, "Search files" or "Search the web" with the arrow keys and Enter. Drag the grip
   on its left to move it along the taskbar.

@@ -97,6 +97,14 @@ Set-ItemProperty $Wallpapers -Name BackgroundType -Value 1 -Type DWord  # solid 
 [Desk]::SystemParametersInfo(20, 0, '', 3) | Out-Null                     # SPI_SETDESKWALLPAPER: none
 [Desk]::SetSysColors(1, @(1), @(0x808000)) | Out-Null                     # COLOR_DESKTOP = teal (0x00BBGGRR)
 
+Write-Host 'Fire axe mouse pointer, smallest size...'
+Set-ItemProperty 'HKCU:\Control Panel\Cursors' -Name Arrow -Value (Join-Path $PSScriptRoot 'cursors\fire-axe.cur')
+Set-ItemProperty 'HKCU:\Control Panel\Cursors' -Name CursorBaseSize -Value 32 -Type DWord
+$Access = 'HKCU:\Software\Microsoft\Accessibility'
+if (-not (Test-Path $Access)) { New-Item $Access -Force | Out-Null }
+Set-ItemProperty $Access -Name CursorSize -Value 1 -Type DWord               # Settings' pointer size slider at 1
+[Desk]::SystemParametersInfo(0x57, 0, $null, 3) | Out-Null                   # SPI_SETCURSORS: reload pointers now
+
 Write-Host 'My Computer, Recycle Bin and Network on the desktop...'
 $Icons = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\HideDesktopIcons\NewStartPanel'
 if (-not (Test-Path $Icons)) { New-Item $Icons -Force | Out-Null }
