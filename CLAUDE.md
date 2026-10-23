@@ -41,9 +41,11 @@ This repo is **public**: never commit passwords, tokens or customer data.
   `git pull --ff-only`, then starts `lock-watch.ps1` hidden.
 - `laptop/lock-watch.ps1`: shows `lock.html` in Edge `--kiosk` (own profile,
   `%LOCALAPPDATA%\ARU98\lock`) at sign-in and after `$IdleMinutes` (5) without input
-  (`GetLastInputInfo`), polling every 2 s. A named mutex keeps one watcher; a second
-  start just locks now. ARU Comms uses a separate profile (`ARU98\edge`) so its window
-  and sign-in survive the lock.
+  (`GetLastInputInfo`), polling every 2 s, and makes the lock window topmost and focused
+  (Windows may open it behind other windows). Each start stops any older watcher, so
+  it always runs the newest code, and locks right away. Logs to
+  `%LOCALAPPDATA%\ARU98\lock-watch.log`. ARU Comms uses a separate profile
+  (`ARU98\edge`) so its window and sign-in survive the lock.
 - `README.md` is an accidental copy of an old `index.html`. `old.jpg` and `index (3).html`
   are the same JPEG screenshot.
 

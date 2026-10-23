@@ -37,7 +37,16 @@ A wrong password gets Nedry: *"Ah ah ah! You didn't say the magic word!"*
   It only covers the screen: programs, downloads, music and laser jobs keep running, and
   unlocking shows everything exactly as you left it. To change the 5 minutes, edit
   `$IdleMinutes` at the top of `lock-watch.ps1`.
-- **Lock now:** double-click **ARU 98** on the desktop.
+- **Lock now:** double-click **ARU 98** on the desktop. That also restarts the lock with the
+  latest code.
+- **Not locking after 5 minutes?** Restart the lock with the latest code from PowerShell:
+
+  ```powershell
+  cd ~\ARU\aru-comms; git pull; Start-Process powershell -WindowStyle Hidden -ArgumentList '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', "$PWD\laptop\lock-watch.ps1"
+  ```
+
+  What the lock did is in `%LOCALAPPDATA%\ARU98\lock-watch.log`
+  (`Get-Content $env:LOCALAPPDATA\ARU98\lock-watch.log -Tail 20` shows the end).
 - **Forgot the password?** Click **Forgot...** and enter the ARU Comms passphrase plus the
   admin phone number instead. They're only asked for here; the app doesn't ask on Plato.
 - **ARU Comms** opens from its desktop icon, already signed in as admin. Locking leaves it
