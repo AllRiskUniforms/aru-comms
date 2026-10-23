@@ -26,8 +26,9 @@ After that, ARU 98's lock screen is the only login.
 Matrix boot sequence → Windows 98 style logon → the password → the ARU Comms app.
 A wrong password gets Nedry: *"Ah ah ah! You didn't say the magic word!"*
 
-- **Nedry clip:** put `nedry.mp4` (or `nedry.webm` / `nedry.gif`) in this folder and it
-  plays with sound. Without a file, a wagging finger appears and the computer says the line.
+- **Nedry:** the wagging Nedry and his looping "ah ah ah" live in `nedry/`. They come from
+  the Jurassic Systems recreation of the movie scene (MIT license, see `nedry/LICENSE`).
+  Turn the volume up.
 - **Skip the intro:** press any key during the Matrix boot.
 - **Close the kiosk:** Alt+F4. Reopen it with the **ARU 98** Desktop shortcut.
 - **Change the password:** run this in PowerShell, with your new password in place of `newpass`:

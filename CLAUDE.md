@@ -19,7 +19,10 @@ This repo is **public**: never commit passwords, tokens or customer data.
   then a phone number (admin is 530-720-6113).
 - `laptop/lock.html`: Plato's lock screen. Matrix boot → Win98 logon → `../index.html`.
   The password is stored only as `sha256('aru98:' + password)` in `PASS_HASH`. A wrong
-  password plays `laptop/nedry.{mp4,webm,gif}` if present, otherwise a built-in stand-in.
+  password shows Nedry wagging his finger with a looping "ah ah ah" (`laptop/nedry/`:
+  cut-out PNGs + `ahahah.mp3` from MarkHjorth/nedry, itself from Tully Robinson's
+  Jurassic Systems; MIT). The user calls this "the Nedry clip from aru98", but it was
+  never in either ARU repo.
 - `laptop/setup-laptop.ps1`: one-time Plato setup (power settings, Git, Claude Code, clone,
   Startup shortcut). Runs via `irm … | iex`, so it must never call `exit`.
 - `laptop/start-kiosk.cmd`: run at sign-in. `git pull --ff-only`, then Edge `--kiosk`
