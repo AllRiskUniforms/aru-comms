@@ -16,13 +16,13 @@ This repo is **public**: never commit passwords, tokens or customer data.
 
 - `index.html`: the whole app in one file. No server; data lives in the browser's
   localStorage, and tabs on one device sync over BroadcastChannel. Login is a passphrase,
-  then a phone number (admin is 530-720-6113), except on Plato: once `lock.html` has run,
-  it stores its URL in `aru_lock_page`, and the app sends any signed-out visit there
-  (`?app`) instead of showing its own login.
-- `laptop/lock.html`: Plato's only login. Matrix boot → Win98 logon. Loading it signs the
-  app out; unlocking signs the app in as admin, then closes the full-screen window to
-  reveal the Windows 98 desktop (or, with `?app` or if the window won't close, opens
-  `../index.html`). The password is stored only as `sha256('aru98:' + password)` in
+  then a phone number (admin is 530-720-6113), except on Plato: its desktop icon opens
+  `index.html#plato`, which signs straight in as admin because the screen lock guards
+  the laptop.
+- `laptop/lock.html`: Plato's screen lock and only login. Matrix boot → Win98 logon. It
+  doesn't touch the app. On unlock it sets its title to "ARU 98 unlocked" and calls
+  `window.close()`; `lock-watch.ps1` closes it by that title if Edge won't. The password
+  is stored only as `sha256('aru98:' + password)` in
   `PASS_HASH`. "Forgot..." takes the app passphrase + admin phone instead
   (`RECOVERY_HASH = sha256('aru98:' + passphrase + ':' + phone digits)`). A wrong
   password shows Nedry wagging his finger with a looping "ah ah ah" (`laptop/nedry/`:
@@ -37,9 +37,13 @@ This repo is **public**: never commit passwords, tokens or customer data.
   on Ferdinand by mistake; `laptop/README.md` has the undo.
 - `laptop/win98-desktop.ps1`: dresses the real desktop as Win98 (RetroBar, teal background,
   My Computer etc., program icons found via `Get-StartApps`). Re-runnable.
-- `laptop/start-kiosk.cmd`: run at sign-in. `git pull --ff-only`, then Edge `--kiosk`
-  with its own profile in `%LOCALAPPDATA%\ARU98\edge`. The app's localStorage lives in
-  that profile.
+- `laptop/start-kiosk.cmd`: run at sign-in (and by the desktop "ARU 98" icon).
+  `git pull --ff-only`, then starts `lock-watch.ps1` hidden.
+- `laptop/lock-watch.ps1`: shows `lock.html` in Edge `--kiosk` (own profile,
+  `%LOCALAPPDATA%\ARU98\lock`) at sign-in and after `$IdleMinutes` (5) without input
+  (`GetLastInputInfo`), polling every 2 s. A named mutex keeps one watcher; a second
+  start just locks now. ARU Comms uses a separate profile (`ARU98\edge`) so its window
+  and sign-in survive the lock.
 - `README.md` is an accidental copy of an old `index.html`. `old.jpg` and `index (3).html`
   are the same JPEG screenshot.
 
@@ -52,8 +56,7 @@ It's generated in the private repo `AllRiskUniforms/aru-membership-app`:
 `.github/workflows/deploy-aru98.yml`).
 
 This repo's `index.html` has hand edits that a fresh upstream build would lose: the
-`aru_lock_page` hand-off to Plato's lock screen (above), and fixes for two bugs that
-still exist upstream:
+`#plato` auto sign-in (above), and fixes for two bugs that still exist upstream:
 
 1. `build-standalone.mjs` inlines JS with `String.replace(pattern, string)`, so `$$` in
    the code becomes `$`. That declares `const $` twice and the whole app script dies.

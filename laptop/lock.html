@@ -166,12 +166,6 @@ body { background: #000; color: var(--green); overflow: hidden; cursor: default;
 const SALT = 'aru98:';
 const PASS_HASH = 'fbecb728c065179d7e7cf1cff938e2397946fab476987bfb372d441b1a507ba3';
 const RECOVERY_HASH = 'db0876adbe8ff57789271a52fcaf6120aaf1d833c7d675e22107c2209b1867c4';
-const APP_URL = '../index.html';
-// ARU Comms' own localStorage keys. This page is Plato's only login: it signs the app
-// in as its admin, and the app sends signed-out visits back to LOCK_PAGE_KEY.
-const APP_DB_KEY = 'aru_demo_v1';
-const APP_ME_KEY = 'aru_demo_me';
-const LOCK_PAGE_KEY = 'aru_lock_page';
 
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => document.querySelectorAll(s);
@@ -277,22 +271,6 @@ async function sha256Hex(text) {
   return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, '0')).join('');
 }
 
-// Every visit here signs the app out, so only this page can let you back in.
-try {
-  localStorage.removeItem(APP_ME_KEY);
-  localStorage.setItem(LOCK_PAGE_KEY, location.href.split(/[?#]/)[0]);
-} catch {}
-
-function signIntoApp() {
-  let adminId = 1; // the app's seeded admin
-  try {
-    const db = JSON.parse(localStorage.getItem(APP_DB_KEY));
-    const admin = db && db.members.find((m) => m.role === 'admin');
-    if (admin) adminId = admin.id;
-  } catch {}
-  localStorage.setItem(APP_ME_KEY, String(adminId));
-}
-
 let recovering = false;
 function setMode(recover) {
   recovering = recover;
@@ -313,17 +291,15 @@ $('#logon').addEventListener('submit', async (e) => {
     ? await sha256Hex(SALT + $('#phrase').value.trim().toLowerCase() + ':' + $('#phone').value.replace(/\D/g, '')) === RECOVERY_HASH
     : await sha256Hex(SALT + $('#pass').value.trim().toLowerCase()) === PASS_HASH;
   if (ok) {
-    signIntoApp();
     $('#dialog').hidden = true;
     $('#granted').hidden = false;
     await sleep(1200);
-    // At sign-in, closing this full-screen window reveals the Windows 98 desktop.
-    // When the app sent us here (?app), or the window won't close, open the app.
-    if (!new URLSearchParams(location.search).has('app')) {
-      window.close();
-      await sleep(500);
-    }
-    location.replace(APP_URL);
+    // Closing this full-screen window uncovers the desktop, where everything kept
+    // running. The title tells lock-watch.ps1 to close it if Edge won't let the page.
+    document.title = 'ARU 98 unlocked';
+    window.close();
+    await sleep(6000);
+    $('#granted').textContent = 'ACCESS GRANTED: press Alt+F4';
   } else {
     nedry();
   }

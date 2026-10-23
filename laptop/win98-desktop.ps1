@@ -121,12 +121,12 @@ foreach ($label in $Programs.Keys) {
 }
 if ($missing) { Write-Warning "Not installed yet, so no icon: $($missing -join ', '). Re-run this after installing them." }
 
-# ARU Comms in its own window, sharing the lock screen's Edge profile (and its sign-in).
+# ARU Comms in its own window; #plato signs it straight in, since the screen lock guards Plato.
 $Edge = (Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\msedge.exe' -ErrorAction SilentlyContinue).'(default)'
 if (-not $Edge) { $Edge = "${env:ProgramFiles(x86)}\Microsoft\Edge\Application\msedge.exe" }
 $lnk = $Shell.CreateShortcut((Join-Path $Desktop 'ARU Comms.lnk'))
 $lnk.TargetPath = $Edge
-$lnk.Arguments = "--app=`"file:///$((Join-Path $Comms 'index.html') -replace '\\', '/')`" --user-data-dir=`"$env:LOCALAPPDATA\ARU98\edge`" --no-first-run"
+$lnk.Arguments = "--app=`"file:///$((Join-Path $Comms 'index.html') -replace '\\', '/')#plato`" --user-data-dir=`"$env:LOCALAPPDATA\ARU98\edge`" --no-first-run"
 $lnk.Save()
 
 # Explorer picks up the desktop icon and My Computer changes when it restarts.

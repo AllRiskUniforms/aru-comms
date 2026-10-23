@@ -9,7 +9,8 @@
 #   2. Installs Git, Node.js, Chrome, the Claude app, Claude Code and RetroBar, and
 #      clones the ARU repos to ~\ARU.
 #   3. Adds Desktop Commander to Claude, and dresses the desktop as Windows 98.
-#   4. Opens the ARU 98 lock screen full screen at every sign-in.
+#   4. Starts the ARU 98 screen lock at every sign-in: it shows right away, and again
+#      after 5 minutes without keyboard or mouse.
 # Deliberately no `exit` anywhere: this usually runs through iex, where exit
 # would close the user's PowerShell window.
 
@@ -111,7 +112,7 @@ if (Test-Path $Launcher) {
     $lnk.WindowStyle = 7  # minimized, so the launcher's console window doesn't pop up
     $lnk.Save()
   }
-  Write-Host 'Added "ARU 98" (the lock screen) to Startup and the Desktop.'
+  Write-Host 'Added "ARU 98" (the screen lock; it also locks after 5 idle minutes) to Startup and the Desktop.'
 } else {
   Write-Warning "$Launcher not found. Is the '$Branch' branch missing the laptop folder?"
 }

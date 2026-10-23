@@ -19,7 +19,8 @@ It:
 3. Adds Desktop Commander to the Claude app and to Claude Code.
 4. Dresses the desktop as Windows 98 (see below).
 5. Adds an **ARU 98** shortcut to Startup and the Desktop. At every sign-in it pulls the
-   latest code and opens the lock screen full screen.
+   latest code and starts the screen lock: the lock screen shows right away, and again
+   after 5 minutes without keyboard or mouse.
 
 It finishes with a short list of things only you can click: Chrome sign-in and sync (this
 brings over Ferdinand's Chrome extensions), adding Claude in Chrome, signing in to the
@@ -31,15 +32,21 @@ asking for its own password. After that, ARU 98's lock screen is the only login.
 Matrix boot sequence → Windows 98 style logon → the password → the Windows 98 desktop.
 A wrong password gets Nedry: *"Ah ah ah! You didn't say the magic word!"*
 
+- **Locks itself after 5 idle minutes.** `lock-watch.ps1` runs hidden from sign-in and brings
+  the lock screen back whenever nobody has touched the keyboard or mouse for 5 minutes.
+  It only covers the screen: programs, downloads, music and laser jobs keep running, and
+  unlocking shows everything exactly as you left it. To change the 5 minutes, edit
+  `$IdleMinutes` at the top of `lock-watch.ps1`.
+- **Lock now:** double-click **ARU 98** on the desktop.
 - **Forgot the password?** Click **Forgot...** and enter the ARU Comms passphrase plus the
-  admin phone number instead. They're only asked for here; the app no longer asks for them on Plato.
-- **ARU Comms** opens from its desktop icon, already signed in as admin. Logging out of it
-  returns to the lock screen.
+  admin phone number instead. They're only asked for here; the app doesn't ask on Plato.
+- **ARU Comms** opens from its desktop icon, already signed in as admin. Locking leaves it
+  open and signed in.
 - **Nedry:** the wagging Nedry and his looping "ah ah ah" live in `nedry/`. They come from
   the Jurassic Systems recreation of the movie scene (MIT license, see `nedry/LICENSE`).
   Turn the volume up.
 - **Skip the intro:** press any key during the Matrix boot.
-- **Close the kiosk:** Alt+F4. Reopen it with the **ARU 98** Desktop shortcut.
+- **Close the lock without the password:** Alt+F4. It comes back after 5 idle minutes.
 - **Change the password:** run this in PowerShell, with your new password in place of `newpass`:
 
   ```powershell
@@ -74,6 +81,7 @@ On that computer, in PowerShell:
 
 ```powershell
 Remove-Item "$([Environment]::GetFolderPath('Startup'))\ARU 98.lnk", "$([Environment]::GetFolderPath('Startup'))\RetroBar.lnk", "$([Environment]::GetFolderPath('Desktop'))\ARU 98.lnk" -ErrorAction SilentlyContinue
+Get-CimInstance Win32_Process -Filter "Name = 'powershell.exe'" | Where-Object CommandLine -like '*lock-watch*' | ForEach-Object { Stop-Process -Id $_.ProcessId }
 powercfg /setacvalueindex SCHEME_CURRENT SUB_NONE CONSOLELOCK 1
 powercfg /setacvalueindex SCHEME_CURRENT SUB_BUTTONS LIDACTION 1
 powercfg /setactive SCHEME_CURRENT
