@@ -285,7 +285,10 @@ const PASSPHRASE = 'all risk uniforms';
 const ADMIN_PHONE = '5307206113';
 const KEY = 'aru_demo_v1';
 const ME_KEY = 'aru_demo_me';
-const bc = ('BroadcastChannel' in window) ? new BroadcastChannel('aru_demo') : null;
+// On Plato, laptop/lock.html is the only login (its password, or this passphrase + the
+// admin phone if that's forgotten). It records its URL here and signs us in as admin.
+const LOCK_PAGE = localStorage.getItem('aru_lock_page');
+const bc =('BroadcastChannel' in window) ? new BroadcastChannel('aru_demo') : null;
 
 const normPhone = (s) => String(s || '').replace(/\D/g, '');
 const now = () => new Date().toISOString();
@@ -358,6 +361,7 @@ $('#reset-demo').onclick = (e) => {
 function boot() {
   const id = Number(localStorage.getItem(ME_KEY));
   if (id) { const m = memberById(id); if (m) { me = m; enterApp(); return; } }
+  if (LOCK_PAGE) location.replace(LOCK_PAGE + '?app');
 }
 function enterApp() {
   $('#login').hidden = true; $('#app').hidden = false;

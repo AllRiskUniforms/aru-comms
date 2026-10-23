@@ -5,7 +5,7 @@
 
 ## One-time setup on Plato
 
-Open **PowerShell** (Start → type `powershell` → Enter) and paste:
+**Run this on Plato only.** On **Plato**, open **PowerShell** (Start → type `powershell` → Enter) and paste:
 
 ```powershell
 irm https://raw.githubusercontent.com/AllRiskUniforms/aru-comms/main/laptop/setup-laptop.ps1 | iex
@@ -14,18 +14,27 @@ irm https://raw.githubusercontent.com/AllRiskUniforms/aru-comms/main/laptop/setu
 It:
 
 1. Keeps the screen on, and stops sleep and hibernate, while plugged in. Closing the lid does nothing.
-2. Installs Git and Claude Code, and downloads the ARU code to `C:\Users\<you>\ARU`.
-3. Adds an **ARU 98** shortcut to Startup and the Desktop. At every sign-in it pulls the
+2. Installs Git, Node.js, Chrome, the Claude app, Claude Code and RetroBar, and downloads
+   the ARU code to `C:\Users\<you>\ARU`.
+3. Adds Desktop Commander to the Claude app and to Claude Code.
+4. Dresses the desktop as Windows 98 (see below).
+5. Adds an **ARU 98** shortcut to Startup and the Desktop. At every sign-in it pulls the
    latest code and opens the lock screen full screen.
 
-It finishes by printing two manual steps that stop Windows asking for its own password.
-After that, ARU 98's lock screen is the only login.
+It finishes with a short list of things only you can click: Chrome sign-in and sync (this
+brings over Ferdinand's Chrome extensions), adding Claude in Chrome, signing in to the
+Claude app (your claude.ai connectors come with the account), and stopping Windows from
+asking for its own password. After that, ARU 98's lock screen is the only login.
 
 ## The lock screen (`lock.html`)
 
-Matrix boot sequence → Windows 98 style logon → the password → the ARU Comms app.
+Matrix boot sequence → Windows 98 style logon → the password → the Windows 98 desktop.
 A wrong password gets Nedry: *"Ah ah ah! You didn't say the magic word!"*
 
+- **Forgot the password?** Click **Forgot...** and enter the ARU Comms passphrase plus the
+  admin phone number instead. They're only asked for here; the app no longer asks for them on Plato.
+- **ARU Comms** opens from its desktop icon, already signed in as admin. Logging out of it
+  returns to the lock screen.
 - **Nedry:** the wagging Nedry and his looping "ah ah ah" live in `nedry/`. They come from
   the Jurassic Systems recreation of the movie scene (MIT license, see `nedry/LICENSE`).
   Turn the volume up.
@@ -42,6 +51,35 @@ A wrong password gets Nedry: *"Ah ah ah! You didn't say the magic word!"*
 The lock is a fun gate, not real security: it's a web page, so Ctrl+Alt+Del or Alt+F4
 gets past it, and the hash of a short dictionary word can be cracked. Don't rely on it
 to protect anything sensitive on this laptop.
+
+## The Windows 98 desktop (`win98-desktop.ps1`)
+
+The real Windows desktop, dressed as Windows 98, so every icon opens the real program or folder:
+
+- [RetroBar](https://github.com/dremin/RetroBar)'s Windows 98 taskbar and Start button
+  (right-click the taskbar → Properties for other themes), and the classic teal background.
+- **My Computer**, **My Documents**, **Recycle Bin**, **Network**, **ARU Comms**, and icons for
+  Google Chrome, LightBurn, Claude, Spotify, Inkscape, PowerShell, Paint and Outlook.
+- Window borders and the Start menu itself stay Windows 10/11.
+
+A program that isn't installed yet gets no icon. Install it, then run this again:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File "$env:USERPROFILE\ARU\aru-comms\laptop\win98-desktop.ps1"
+```
+
+## Ran the setup on the wrong computer?
+
+On that computer, in PowerShell:
+
+```powershell
+Remove-Item "$([Environment]::GetFolderPath('Startup'))\ARU 98.lnk", "$([Environment]::GetFolderPath('Startup'))\RetroBar.lnk", "$([Environment]::GetFolderPath('Desktop'))\ARU 98.lnk" -ErrorAction SilentlyContinue
+powercfg /setacvalueindex SCHEME_CURRENT SUB_NONE CONSOLELOCK 1
+powercfg /setacvalueindex SCHEME_CURRENT SUB_BUTTONS LIDACTION 1
+powercfg /setactive SCHEME_CURRENT
+```
+
+Then set the screen and sleep times back in **Settings → System → Power**.
 
 ## LightBurn: copy Ferdinand's setup to Plato
 

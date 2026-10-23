@@ -19,7 +19,7 @@ html, body { height: 100%; margin: 0; }
 body { background: #000; color: var(--green); overflow: hidden; cursor: default; user-select: none; }
 #matrix { position: fixed; inset: 0; z-index: 0; display: block; }
 .stage { position: fixed; inset: 0; z-index: 1; display: flex; align-items: center; justify-content: center; padding: 16px; }
-.stage[hidden] { display: none; }
+[hidden] { display: none !important; }
 
 /* ── Boot / loading ────────────────────────────────────────────────────────── */
 #boot { background: rgba(0,0,0,0.55); flex-direction: column; font-family: "Lucida Console", Consolas, "Courier New", monospace; }
@@ -121,13 +121,16 @@ body { background: #000; color: var(--green); overflow: hidden; cursor: default;
       <div class="logon-body">
         <div class="icon" id="key-icon"></div>
         <div class="logon-main">
-          <p>Type your password to log on to ARU 98.</p>
-          <div class="field"><label for="user"><u>U</u>ser name:</label><input id="user" value="ARU" spellcheck="false" /></div>
-          <div class="field"><label for="pass"><u>P</u>assword:</label><input id="pass" type="password" spellcheck="false" /></div>
+          <p id="logon-msg"></p>
+          <div class="field" data-mode="password"><label for="user"><u>U</u>ser name:</label><input id="user" value="ARU" spellcheck="false" /></div>
+          <div class="field" data-mode="password"><label for="pass"><u>P</u>assword:</label><input id="pass" type="password" spellcheck="false" /></div>
+          <div class="field" data-mode="recover"><label for="phrase">P<u>a</u>ssphrase:</label><input id="phrase" type="password" spellcheck="false" /></div>
+          <div class="field" data-mode="recover"><label for="phone">P<u>h</u>one:</label><input id="phone" type="tel" spellcheck="false" /></div>
         </div>
         <div class="buttons">
           <button class="w98btn default" type="submit">OK</button>
           <button class="w98btn" type="button" id="cancel">Cancel</button>
+          <button class="w98btn" type="button" id="forgot" data-mode="password">Forgot...</button>
         </div>
       </div>
     </form>
@@ -157,12 +160,21 @@ body { background: #000; color: var(--green); overflow: hidden; cursor: default;
 // Windows-98 style logon. A wrong password gets Nedry wagging his finger.
 //
 // The password is stored as a salted SHA-256 hash so it isn't readable in this
-// public repo. To change it, see laptop/README.md.
+// public repo. To change it, see laptop/README.md. If it's forgotten, "Forgot..."
+// takes the ARU Comms passphrase plus the admin phone number instead
+// (RECOVERY_HASH = sha256(SALT + passphrase + ':' + phone digits)).
 const SALT = 'aru98:';
 const PASS_HASH = 'fbecb728c065179d7e7cf1cff938e2397946fab476987bfb372d441b1a507ba3';
+const RECOVERY_HASH = 'db0876adbe8ff57789271a52fcaf6120aaf1d833c7d675e22107c2209b1867c4';
 const APP_URL = '../index.html';
+// ARU Comms' own localStorage keys. This page is Plato's only login: it signs the app
+// in as its admin, and the app sends signed-out visits back to LOCK_PAGE_KEY.
+const APP_DB_KEY = 'aru_demo_v1';
+const APP_ME_KEY = 'aru_demo_me';
+const LOCK_PAGE_KEY = 'aru_lock_page';
 
 const $ = (s) => document.querySelector(s);
+const $$ = (s) => document.querySelectorAll(s);
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 // ── Matrix rain ──────────────────────────────────────────────────────────────
@@ -265,20 +277,59 @@ async function sha256Hex(text) {
   return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, '0')).join('');
 }
 
+// Every visit here signs the app out, so only this page can let you back in.
+try {
+  localStorage.removeItem(APP_ME_KEY);
+  localStorage.setItem(LOCK_PAGE_KEY, location.href.split(/[?#]/)[0]);
+} catch {}
+
+function signIntoApp() {
+  let adminId = 1; // the app's seeded admin
+  try {
+    const db = JSON.parse(localStorage.getItem(APP_DB_KEY));
+    const admin = db && db.members.find((m) => m.role === 'admin');
+    if (admin) adminId = admin.id;
+  } catch {}
+  localStorage.setItem(APP_ME_KEY, String(adminId));
+}
+
+let recovering = false;
+function setMode(recover) {
+  recovering = recover;
+  $$('[data-mode="password"]').forEach((el) => { el.hidden = recover; });
+  $$('[data-mode="recover"]').forEach((el) => { el.hidden = !recover; });
+  $('#logon-msg').textContent = recover
+    ? 'Forgot your password? Enter the ARU Comms passphrase and the admin phone number.'
+    : 'Type your password to log on to ARU 98.';
+  for (const id of ['#pass', '#phrase', '#phone']) $(id).value = '';
+  (recover ? $('#phrase') : $('#pass')).focus();
+}
+setMode(false);
+
 $('#logon').addEventListener('submit', async (e) => {
   e.preventDefault();
   if (!$('#nedry').hidden) return;
-  const attempt = $('#pass').value.trim().toLowerCase();
-  if (await sha256Hex(SALT + attempt) === PASS_HASH) {
+  const ok = recovering
+    ? await sha256Hex(SALT + $('#phrase').value.trim().toLowerCase() + ':' + $('#phone').value.replace(/\D/g, '')) === RECOVERY_HASH
+    : await sha256Hex(SALT + $('#pass').value.trim().toLowerCase()) === PASS_HASH;
+  if (ok) {
+    signIntoApp();
     $('#dialog').hidden = true;
     $('#granted').hidden = false;
     await sleep(1200);
+    // At sign-in, closing this full-screen window reveals the Windows 98 desktop.
+    // When the app sent us here (?app), or the window won't close, open the app.
+    if (!new URLSearchParams(location.search).has('app')) {
+      window.close();
+      await sleep(500);
+    }
     location.replace(APP_URL);
   } else {
     nedry();
   }
 });
-$('#cancel').onclick = () => { $('#pass').value = ''; $('#pass').focus(); };
+$('#cancel').onclick = () => setMode(false);
+$('#forgot').onclick = () => setMode(true);
 
 // ── Nedry ────────────────────────────────────────────────────────────────────
 let nedryTimers = [];
@@ -296,7 +347,7 @@ function nedry() {
   magic.textContent = '';
   $('#nedry').hidden = false;
   $('#nedry-hint').hidden = true;
-  $('#pass').blur();
+  document.activeElement.blur();
   fitNedry();
   const ahahah = $('#ahahah');
   ahahah.currentTime = 0;
@@ -328,10 +379,9 @@ function closeNedry(e) {
   nedryTimers = [];
   $('#ahahah').pause();
   $('#nedry').hidden = true;
-  $('#pass').value = '';
   const form = $('#logon');
   form.classList.remove('shake'); void form.offsetWidth; form.classList.add('shake');
-  $('#pass').focus();
+  setMode(recovering);
 }
 
 boot();
