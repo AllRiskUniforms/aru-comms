@@ -79,9 +79,9 @@ The real Windows desktop, dressed as Windows 98, so every icon opens the real pr
 - A little **fire axe** mouse pointer at the smallest pointer size (`cursors/fire-axe.cur`, drawn
   by `cursors/make-cursors.py`). To get the normal arrow back: Start → type `mouse pointer` →
   Additional mouse settings → Pointers → Use Default.
-- A Windows 98 style **Search** box on the taskbar (`search-bar.ps1`): type, then pick a
-  program, "Search files" or "Search the web" with the arrow keys and Enter. Drag the grip
-  on its left to move it along the taskbar.
+- A Windows 98 style **Search** box on the taskbar (`search-bar.ps1`). Clicking it opens the
+  real Windows search (same as Win+S), so it finds programs, files, settings and web results
+  just like the normal search bar. Drag the grip on its left to move it along the taskbar.
 - Window borders and the Start menu itself stay Windows 10/11.
 
 A program that isn't installed yet gets no icon. Install it, then run this again:

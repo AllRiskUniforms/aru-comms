@@ -1,7 +1,7 @@
 # A Windows 98 style search box on Plato's RetroBar taskbar, in place of the Windows
-# search bar that RetroBar hides. Type to see matches, then pick one with the arrow keys
-# and Enter (or a click): a program from the Start menu, "Search files" (Explorer search
-# of your user folder) or "Search the web". Drag the grip on its left to move it.
+# search bar that RetroBar hides. Clicking it opens the real Windows search (as Win+S
+# does), so typing searches exactly like the normal taskbar search: programs, files,
+# settings, the web, best match and recents. Drag the grip on its left to move it.
 # It hides while the ARU 98 lock or anything full screen is in front.
 # win98-desktop.ps1 starts it at sign-in; starting it again replaces the running copy.
 
@@ -20,6 +20,15 @@ public static class Native {
   [DllImport("user32.dll", CharSet = CharSet.Unicode)] static extern int GetClassName(IntPtr hwnd, StringBuilder name, int max);
   [DllImport("user32.dll")] static extern bool SetWindowPos(IntPtr hwnd, IntPtr after, int x, int y, int cx, int cy, uint flags);
   [DllImport("user32.dll")] static extern bool ShowWindow(IntPtr hwnd, int cmd);
+  [DllImport("user32.dll")] static extern void keybd_event(byte vk, byte scan, uint flags, UIntPtr extra);
+
+  // Win+S: opens Windows search with its text box ready for typing.
+  public static void OpenWindowsSearch() {
+    keybd_event(0x5B, 0, 0, UIntPtr.Zero);  // left Windows key down
+    keybd_event(0x53, 0, 0, UIntPtr.Zero);  // S down
+    keybd_event(0x53, 0, 2, UIntPtr.Zero);  // S up
+    keybd_event(0x5B, 0, 2, UIntPtr.Zero);  // Windows key up
+  }
 
   // Shown above other windows without taking focus: SW_SHOWNOACTIVATE, then
   // HWND_TOPMOST with NOSIZE|NOMOVE|NOACTIVATE.
@@ -53,16 +62,6 @@ Get-CimInstance Win32_Process -Filter "Name = 'powershell.exe'" |
 [Windows.Forms.Application]::VisualStyleState = 'NoneEnabled'  # classic 3D borders, like 98
 $Settings = Join-Path $env:LOCALAPPDATA 'ARU98\search-bar.json'
 $Face = [Drawing.Color]::FromArgb(192, 192, 192)
-$Font = New-Object Drawing.Font('Tahoma', 8.25)
-
-$Apps = @()
-$AppsLoaded = [datetime]::MinValue
-function Update-Apps {
-  if (((Get-Date) - $script:AppsLoaded).TotalMinutes -ge 10) {
-    $script:Apps = @(Get-StartApps)
-    $script:AppsLoaded = Get-Date
-  }
-}
 
 $bar = New-Object Windows.Forms.Form
 $bar.FormBorderStyle = 'None'
@@ -70,15 +69,9 @@ $bar.ShowInTaskbar = $false
 $bar.TopMost = $true
 $bar.StartPosition = 'Manual'
 $bar.BackColor = $Face
-$bar.Font = $Font
+$bar.Font = New-Object Drawing.Font('Tahoma', 8.25)
 $scale = if ($bar.DeviceDpi) { $bar.DeviceDpi / 96.0 } else { 1.0 }
 function Px($n) { [int][Math]::Round($n * $scale) }
-
-# The bar is a strip (grip, "Search" label, text box) along the taskbar. While there are
-# matches, the form grows upward and the list fills the space above the strip.
-$strip = New-Object Windows.Forms.Panel
-$strip.Dock = 'Bottom'
-$strip.BackColor = $Face
 
 $grip = New-Object Windows.Forms.Panel
 $grip.Cursor = 'SizeWE'
@@ -97,97 +90,46 @@ $label.Text = 'Search'
 $label.AutoSize = $true
 $label.BackColor = $Face
 
+# Looks like a sunken 98 text box; clicking it hands off to Windows search.
 $box = New-Object Windows.Forms.TextBox
 $box.BorderStyle = 'Fixed3D'
+$box.ReadOnly = $true
+$box.TabStop = $false
+$box.BackColor = [Drawing.Color]::White
+$box.ForeColor = [Drawing.Color]::Gray
+$box.Cursor = 'IBeam'
+$box.Text = 'Type here to search'
 
-$list = New-Object Windows.Forms.ListBox
-$list.Dock = 'Fill'
-$list.BorderStyle = 'FixedSingle'
-$list.IntegralHeight = $false
+$bar.Controls.AddRange(@($grip, $label, $box))
 
-$strip.Controls.AddRange(@($grip, $label, $box))
-$bar.Controls.Add($list)
-$bar.Controls.Add($strip)
-
-$script:StripTop = 0
-$script:ListShown = $false
 function Update-Layout {
   $screen = [Windows.Forms.Screen]::PrimaryScreen
   $top = $screen.WorkingArea.Bottom
   $height = $screen.Bounds.Bottom - $top
   if ($height -lt (Px 20)) { $height = Px 28; $top = $screen.Bounds.Bottom - $height }  # taskbar hidden or not at the bottom
-  $stripHeight = $height - (Px 6)
+  $barHeight = $height - (Px 6)
   $width = Px 230
-  $script:StripTop = $top + (Px 3)
 
-  $strip.Height = $stripHeight
-  $grip.SetBounds((Px 2), 0, (Px 3) + 1, $stripHeight)
+  $grip.SetBounds((Px 2), 0, (Px 3) + 1, $barHeight)
   $label.Left = $grip.Right + (Px 4)
-  $label.Top = [Math]::Max(0, [int](($stripHeight - $label.PreferredHeight) / 2))
+  $label.Top = [Math]::Max(0, [int](($barHeight - $label.PreferredHeight) / 2))
   $box.Left = $label.Left + $label.PreferredWidth + (Px 2)
   $box.Width = $width - $box.Left - (Px 2)
-  $box.Top = [Math]::Max(0, [int](($stripHeight - $box.Height) / 2))
+  $box.Top = [Math]::Max(0, [int](($barHeight - $box.Height) / 2))
 
   $x = $screen.Bounds.Right - $width - (Px 230)  # default: left of the tray and clock
   if (Test-Path $Settings) { try { $x = [int](Get-Content $Settings -Raw | ConvertFrom-Json).x } catch {} }
   $x = [Math]::Max(0, [Math]::Min($x, $screen.Bounds.Right - $width))
-  $bar.SetBounds($x, $script:StripTop, $width, $stripHeight)
+  $bar.SetBounds($x, $top + (Px 3), $width, $barHeight)
   $script:LayoutFor = $screen.WorkingArea
-  Set-ListShown $script:ListShown
 }
 
-function Set-ListShown($show) {
-  $script:ListShown = $show
-  $listHeight = if ($show) { [Math]::Min($list.Items.Count, 10) * $list.ItemHeight + 4 } else { 0 }
-  $bar.SetBounds($bar.Left, $script:StripTop - $listHeight, $bar.Width, $strip.Height + $listHeight)
+$openSearch = {
+  $box.SelectionLength = 0
+  [Native]::OpenWindowsSearch()
 }
-
-$script:Choices = @()
-function Update-List {
-  $q = $box.Text.Trim()
-  $script:Choices = @()
-  if ($q) {
-    Update-Apps
-    $script:Choices += @($script:Apps |
-      Where-Object { $_.Name.IndexOf($q, [StringComparison]::OrdinalIgnoreCase) -ge 0 } |
-      Sort-Object @{ Expression = { -not $_.Name.StartsWith($q, [StringComparison]::OrdinalIgnoreCase) } }, Name |
-      Select-Object -First 7 |
-      ForEach-Object { [pscustomobject]@{ Text = $_.Name; Kind = 'app'; Value = $_.AppID } })
-    $script:Choices += [pscustomobject]@{ Text = "Search files for `"$q`""; Kind = 'files'; Value = $q }
-    $script:Choices += [pscustomobject]@{ Text = "Search the web for `"$q`""; Kind = 'web'; Value = $q }
-  }
-  $list.BeginUpdate()
-  $list.Items.Clear()
-  foreach ($c in $script:Choices) { [void]$list.Items.Add($c.Text) }
-  $list.EndUpdate()
-  if ($list.Items.Count) { $list.SelectedIndex = 0 }
-  Set-ListShown ($list.Items.Count -gt 0)
-}
-
-function Invoke-Choice {
-  if ($list.SelectedIndex -lt 0) { return }
-  $c = $script:Choices[$list.SelectedIndex]
-  $q = [uri]::EscapeDataString($c.Value)
-  switch ($c.Kind) {
-    'app'   { Start-Process "$env:WINDIR\explorer.exe" "shell:AppsFolder\$($c.Value)" }
-    'files' { Start-Process "search-ms:query=$q&crumb=location:$([uri]::EscapeDataString($env:USERPROFILE))" }
-    'web'   { Start-Process "https://www.google.com/search?q=$q" }
-  }
-  $box.Clear()
-}
-
-$box.Add_TextChanged({ Update-List })
-$box.Add_KeyDown({
-  param($s, $e)
-  switch ($e.KeyCode) {
-    'Down'   { if ($list.SelectedIndex -lt $list.Items.Count - 1) { $list.SelectedIndex = $list.SelectedIndex + 1 }; $e.Handled = $true }
-    'Up'     { if ($list.SelectedIndex -gt 0) { $list.SelectedIndex = $list.SelectedIndex - 1 }; $e.Handled = $true }
-    'Enter'  { Invoke-Choice; $e.SuppressKeyPress = $true }
-    'Escape' { $box.Clear(); $e.SuppressKeyPress = $true }
-  }
-})
-$list.Add_Click({ Invoke-Choice })
-$bar.Add_Deactivate({ if ($script:ListShown) { $box.Clear() } })
+$box.Add_MouseDown($openSearch)
+$label.Add_MouseDown($openSearch)
 
 # Drag the grip to slide the bar along the taskbar; where it's left is remembered.
 $script:DragFrom = $null
@@ -214,7 +156,7 @@ $timer.Add_Tick({
     if ($screen.WorkingArea -ne $script:LayoutFor) { Update-Layout }
     $lock = Get-Process msedge -ErrorAction SilentlyContinue | Where-Object MainWindowTitle -like 'ARU 98*'
     if ($lock -or [Native]::FullScreenInFront($screen.Bounds.Width, $screen.Bounds.Height)) {
-      if (-not $script:Hidden) { $box.Clear(); [Native]::Hide($bar.Handle); $script:Hidden = $true }
+      if (-not $script:Hidden) { [Native]::Hide($bar.Handle); $script:Hidden = $true }
     } else {
       [Native]::ShowOnTop($bar.Handle)
       $script:Hidden = $false
@@ -222,5 +164,5 @@ $timer.Add_Tick({
   } catch {}
 })
 
-$bar.Add_Load({ Update-Layout; Update-Apps; $timer.Start() })
+$bar.Add_Load({ Update-Layout; $timer.Start() })
 [Windows.Forms.Application]::Run($bar)
