@@ -68,6 +68,21 @@ The lock is a fun gate, not real security: it's a web page, so Ctrl+Alt+Del or A
 gets past it, and the hash of a short dictionary word can be cracked. Don't rely on it
 to protect anything sensitive on this laptop.
 
+## Messages to Plato
+
+Anything sent to Plato's private message channel pops up on the lock screen as its own
+Windows 98 message box, with a chime. Drag them by the title bar; OK or × closes one.
+Messages sent while Plato is unlocked show at the next lock (they're kept for 12 hours).
+
+- The channel name is in `laptop/messages-config.js` on Plato. Setup creates it, and it's
+  never committed: anyone who knows it can send.
+- **From any browser:** open `https://ntfy.sh/<channel>` and type in the box at the bottom.
+  Bookmark it.
+- **From a phone:** the free ntfy app; subscribe to the channel, then publish to it.
+- **From PowerShell:** `irm https://ntfy.sh/<channel> -Method Post -Body 'Dinner at 7' -Headers @{ Title = 'From Tripp' }`.
+  The title becomes the window's title.
+- Messages pass through ntfy.sh, a public service. Don't send passwords or private details.
+
 ## The Windows 98 desktop (`win98-desktop.ps1`)
 
 The real Windows desktop, dressed as Windows 98, so every icon opens the real program or folder:

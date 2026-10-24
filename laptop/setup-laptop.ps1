@@ -84,6 +84,17 @@ if (-not (Test-Path (Join-Path $Membership '.git'))) {
   if ($LASTEXITCODE -ne 0) { Write-Warning 'Skipped aru-membership-app. Re-run this script after signing in to GitHub.' }
 }
 
+Step 'Messages to Plato'
+# A private ntfy.sh topic: anything published to it pops up on the lock screen. It lives
+# only in this gitignored file, since anyone who knows it can send.
+$MsgConfig = Join-Path $Comms 'laptop\messages-config.js'
+if (-not (Test-Path $MsgConfig)) {
+  $topic = 'plato-' + [guid]::NewGuid().ToString('N').Substring(0, 20)
+  Set-Content $MsgConfig "window.ARU98_MESSAGES = { topic: '$topic' };"
+}
+$MsgTopic = [regex]::Match((Get-Content $MsgConfig -Raw), "topic: '([^']+)'").Groups[1].Value
+Write-Host "Send messages to Plato's lock screen at https://ntfy.sh/$MsgTopic (keep this link private)."
+
 Step 'Desktop Commander for Claude'
 # npx.cmd, not npx: the .ps1 shim is blocked by the default execution policy.
 if (Get-Command npx.cmd -ErrorAction SilentlyContinue) {
@@ -137,6 +148,7 @@ A few things only you can click:
         "Users must enter a user name and password to use this computer",
         click OK and type your Windows password once.
 
+Messages to Plato's lock screen: https://ntfy.sh/$MsgTopic (keep it private).
 Restart Plato (or double-click ARU 98 on the desktop) to see the lock screen.
 Claude Code: open PowerShell and run   cd ~\ARU\aru-comms; claude
 "@

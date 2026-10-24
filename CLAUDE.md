@@ -29,6 +29,11 @@ This repo is **public**: never commit passwords, tokens or customer data.
   cut-out PNGs + `ahahah.mp3` from MarkHjorth/nedry, itself from Tully Robinson's
   Jurassic Systems; MIT). The user calls this "the Nedry clip from aru98", but it was
   never in either ARU repo.
+- Messages to Plato: `lock.html` subscribes (EventSource) to `https://ntfy.sh/<topic>/sse`
+  and shows each message as a draggable Win98 message box above the logon (below Nedry).
+  The topic is in `laptop/messages-config.js`, gitignored and created by setup, because
+  anyone who knows it can send. The last message id shown is kept in localStorage and
+  passed as `since=` on the next lock, so messages sent while unlocked appear then.
 - `laptop/setup-laptop.ps1`: one-time Plato setup (power settings; winget installs of Git,
   Node.js, Chrome, Claude app, RetroBar; Claude Code; clone; Desktop Commander for the
   Claude app and Claude Code; Win98 desktop; Startup shortcut). Runs via `irm … | iex`, so
