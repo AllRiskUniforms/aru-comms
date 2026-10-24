@@ -29,11 +29,15 @@ This repo is **public**: never commit passwords, tokens or customer data.
   cut-out PNGs + `ahahah.mp3` from MarkHjorth/nedry, itself from Tully Robinson's
   Jurassic Systems; MIT). The user calls this "the Nedry clip from aru98", but it was
   never in either ARU repo.
-- Messages to Plato: `lock.html` subscribes (EventSource) to `https://ntfy.sh/<topic>/sse`
-  and shows each message as a draggable Win98 message box above the logon (below Nedry).
-  The topic is in `laptop/messages-config.js`, gitignored and created by setup, because
-  anyone who knows it can send. The last message id shown is kept in localStorage and
-  passed as `since=` on the next lock, so messages sent while unlocked appear then.
+- `laptop/messages.ps1`: messages to Plato. Polls `https://ntfy.sh/<topic>/json?poll=1`
+  every 10 s and shows each message as its own Win98-style WinForms box (custom-drawn
+  title bar, classic controls), topmost over everything including the lock, at a random
+  spot (3x3 cells: never the middle, never the previous box's cell, empty cells first,
+  never over the 420x142 password box). Boxes persist in `%LOCALAPPDATA%\ARU98\messages.json`
+  (with their spots and the last id) until OK/x, across locks and restarts. Started by
+  `start-kiosk.cmd`. The topic is in `laptop/messages-config.js`, gitignored and created
+  by setup, because anyone who knows it can send. (An earlier version drew the boxes
+  inside `lock.html`, but those vanished on unlock.)
 - `laptop/setup-laptop.ps1`: one-time Plato setup (power settings; winget installs of Git,
   Node.js, Chrome, Claude app, RetroBar; Claude Code; clone; Desktop Commander for the
   Claude app and Claude Code; Win98 desktop; Startup shortcut). Runs via `irm … | iex`, so

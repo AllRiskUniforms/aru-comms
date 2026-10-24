@@ -96,21 +96,6 @@ body { background: #000; color: var(--green); overflow: hidden; cursor: default;
 .nedry-fig .hand { top: 155px; left: 265px; transform-origin: 50% 100%; animation: wag 0.7s linear infinite; }
 @keyframes wag { 0%, 100% { transform: rotate(-10deg); } 50% { transform: rotate(14deg); } }
 #nedry-hint { position: absolute; bottom: 16px; left: 0; right: 0; text-align: center; color: #9a9a9a; font: 13px Tahoma, sans-serif; }
-
-/* ── Messages sent to Plato ────────────────────────────────────────────────── */
-#messages { position: fixed; inset: 0; z-index: 4; pointer-events: none; }
-.msgbox { position: absolute; width: min(360px, calc(100vw - 32px)); pointer-events: auto; }
-.msgbox .title-bar { cursor: move; touch-action: none; }
-.msgbox .title-bar-controls span { cursor: default; }
-.msg-body { display: flex; gap: 14px; padding: 14px 12px 4px; }
-.msg-icon {
-  flex: none; width: 32px; height: 32px; border-radius: 50%; border: 1px solid #000;
-  background: radial-gradient(circle at 35% 35%, #7d95ff, #0000c8 70%);
-  color: #fff; font: bold italic 22px/31px "Times New Roman", serif; text-align: center;
-}
-.msg-text { white-space: pre-wrap; word-break: break-word; max-height: 50vh; overflow: auto; padding-top: 4px; user-select: text; }
-.msg-time { color: #444; font-size: 11px; margin-top: 8px; }
-.msg-buttons { display: flex; justify-content: center; padding: 8px 0 10px; }
   </style>
 </head>
 <body>
@@ -153,9 +138,6 @@ body { background: #000; color: var(--green); overflow: hidden; cursor: default;
 
   <div id="granted" class="stage" hidden>ACCESS GRANTED</div>
 
-  <!-- Messages sent to Plato: one Windows 98 message box each -->
-  <div id="messages"></div>
-
   <!-- 3. Wrong password -->
   <div id="nedry" class="stage" hidden>
     <pre id="magic"></pre>
@@ -173,8 +155,6 @@ body { background: #000; color: var(--green); overflow: hidden; cursor: default;
     <div id="nedry-hint" hidden>press any key to try again</div>
   </div>
 
-  <!-- Plato's private message topic; only on Plato (gitignored), see laptop/README.md -->
-  <script src="messages-config.js"></script>
   <script>
 // ARU 98 lock screen for the always-on home laptop. Matrix boot sequence, then a
 // Windows-98 style logon. A wrong password gets Nedry wagging his finger.
@@ -379,102 +359,6 @@ function closeNedry(e) {
   form.classList.remove('shake'); void form.offsetWidth; form.classList.add('shake');
   setMode(recovering);
 }
-
-// ── Messages ─────────────────────────────────────────────────────────────────
-// Messages sent to Plato pop up over the lock screen, one Windows 98 message box
-// each. They arrive on a private ntfy.sh topic named in messages-config.js, which
-// exists only on Plato: anyone who knows the topic can send, so it stays out of
-// this public repo. The last message shown is remembered, so anything sent while
-// Plato was unlocked shows at the next lock (ntfy.sh keeps messages 12 hours).
-const MESSAGES_SEEN_KEY = 'aru98_last_message';
-const MAX_MESSAGE_WINDOWS = 12;
-const shownMessages = new Set();
-let messageCount = 0;
-let topZ = 1;
-let audio = null;
-
-function chime() {
-  try {
-    audio = audio || new AudioContext();
-    for (const [freq, at] of [[880, 0], [660, 0.13]]) {
-      const osc = audio.createOscillator();
-      const gain = audio.createGain();
-      const t = audio.currentTime + at;
-      osc.frequency.value = freq;
-      gain.gain.setValueAtTime(0.15, t);
-      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.35);
-      osc.connect(gain).connect(audio.destination);
-      osc.start(t);
-      osc.stop(t + 0.4);
-    }
-  } catch {}
-}
-
-function dragByTitle(box) {
-  const bar = box.querySelector('.title-bar');
-  bar.addEventListener('pointerdown', (e) => {
-    if (e.target.closest('.title-bar-controls')) return;
-    const dx = e.clientX - box.offsetLeft;
-    const dy = e.clientY - box.offsetTop;
-    bar.setPointerCapture(e.pointerId);
-    const move = (ev) => {
-      box.style.left = (ev.clientX - dx) + 'px';
-      box.style.top = Math.max(0, ev.clientY - dy) + 'px';
-    };
-    bar.addEventListener('pointermove', move);
-    bar.addEventListener('pointerup', () => bar.removeEventListener('pointermove', move), { once: true });
-  });
-}
-
-function showMessage(text, title, time) {
-  const box = document.createElement('div');
-  box.className = 'win98 msgbox';
-  box.innerHTML = `
-    <div class="title-bar"><span></span><span class="title-bar-controls"><span>×</span></span></div>
-    <div class="msg-body">
-      <div class="msg-icon">i</div>
-      <div><div class="msg-text"></div><div class="msg-time"></div></div>
-    </div>
-    <div class="msg-buttons"><button class="w98btn default" type="button">OK</button></div>`;
-  box.querySelector('.title-bar span').textContent = title || 'Message';
-  box.querySelector('.msg-text').textContent = text;
-  box.querySelector('.msg-time').textContent =
-    'Sent ' + time.toLocaleString([], { weekday: 'short', hour: 'numeric', minute: '2-digit' });
-  // Cascade down and to the right, starting over every 8 boxes.
-  const step = messageCount++ % 8;
-  box.style.left = (40 + step * 28) + 'px';
-  box.style.top = (40 + step * 26) + 'px';
-  box.style.zIndex = ++topZ;
-  box.addEventListener('pointerdown', () => { box.style.zIndex = ++topZ; });
-  const close = () => {
-    box.remove();
-    if (!$('#dialog').hidden && $('#nedry').hidden) (recovering ? $('#phrase') : $('#pass')).focus();
-  };
-  box.querySelector('button').onclick = close;
-  box.querySelector('.title-bar-controls span').onclick = close;
-  dragByTitle(box);
-  const area = $('#messages');
-  area.appendChild(box);
-  while (area.children.length > MAX_MESSAGE_WINDOWS) area.firstElementChild.remove();
-  chime();
-}
-
-(function listenForMessages() {
-  const topic = window.ARU98_MESSAGES && window.ARU98_MESSAGES.topic;
-  if (!topic || !('EventSource' in window)) return;
-  let since = '';
-  try { since = localStorage.getItem(MESSAGES_SEEN_KEY) || ''; } catch {}
-  const url = `https://ntfy.sh/${encodeURIComponent(topic)}/sse` + (since ? `?since=${encodeURIComponent(since)}` : '');
-  const source = new EventSource(url);  // reconnects by itself if the network drops
-  source.onmessage = (e) => {
-    let m;
-    try { m = JSON.parse(e.data); } catch { return; }
-    if (m.event !== 'message' || !m.message || shownMessages.has(m.id)) return;
-    shownMessages.add(m.id);
-    showMessage(String(m.message).slice(0, 2000), m.title, new Date(m.time * 1000));
-    try { localStorage.setItem(MESSAGES_SEEN_KEY, m.id); } catch {}
-  };
-})();
 
 boot();
   </script>

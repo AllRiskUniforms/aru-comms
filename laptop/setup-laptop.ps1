@@ -85,7 +85,7 @@ if (-not (Test-Path (Join-Path $Membership '.git'))) {
 }
 
 Step 'Messages to Plato'
-# A private ntfy.sh topic: anything published to it pops up on the lock screen. It lives
+# A private ntfy.sh topic: anything published to it pops up on screen (messages.ps1). It lives
 # only in this gitignored file, since anyone who knows it can send.
 $MsgConfig = Join-Path $Comms 'laptop\messages-config.js'
 if (-not (Test-Path $MsgConfig)) {
@@ -148,7 +148,7 @@ A few things only you can click:
         "Users must enter a user name and password to use this computer",
         click OK and type your Windows password once.
 
-Messages to Plato's lock screen: https://ntfy.sh/$MsgTopic (keep it private).
+Send messages to Plato: https://ntfy.sh/$MsgTopic (keep it private).
 Restart Plato (or double-click ARU 98 on the desktop) to see the lock screen.
 Claude Code: open PowerShell and run   cd ~\ARU\aru-comms; claude
 "@

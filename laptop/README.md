@@ -70,9 +70,12 @@ to protect anything sensitive on this laptop.
 
 ## Messages to Plato
 
-Anything sent to Plato's private message channel pops up on the lock screen as its own
-Windows 98 message box, with a chime. Drag them by the title bar; OK or × closes one.
-Messages sent while Plato is unlocked show at the next lock (they're kept for 12 hours).
+Anything sent to Plato's private message channel pops up as its own Windows 98 message
+box (`messages.ps1`), with a chime, within about 10 seconds. Each lands somewhere random,
+never in the same part of the screen as the one before and never over the lock screen's
+password box, and sits on top of everything, the Matrix lock included. A box stays put,
+through locks, unlocks and restarts, until someone clicks **OK** or **×**. Drag one by its
+title bar to move it.
 
 - The channel name is in `laptop/messages-config.js` on Plato. Setup creates it, and it's
   never committed: anyone who knows it can send.
@@ -112,7 +115,7 @@ On that computer, in PowerShell:
 
 ```powershell
 Remove-Item "$([Environment]::GetFolderPath('Startup'))\ARU 98.lnk", "$([Environment]::GetFolderPath('Startup'))\RetroBar.lnk", "$([Environment]::GetFolderPath('Startup'))\ARU Search.lnk", "$([Environment]::GetFolderPath('Desktop'))\ARU 98.lnk" -ErrorAction SilentlyContinue
-Get-CimInstance Win32_Process -Filter "Name = 'powershell.exe'" | Where-Object { $_.CommandLine -like '*lock-watch*' -or $_.CommandLine -like '*search-bar*' } | ForEach-Object { Stop-Process -Id $_.ProcessId }
+Get-CimInstance Win32_Process -Filter "Name = 'powershell.exe'" | Where-Object { $_.CommandLine -like '*lock-watch*' -or $_.CommandLine -like '*search-bar*' -or $_.CommandLine -like '*messages.ps1*' } | ForEach-Object { Stop-Process -Id $_.ProcessId }
 powercfg /setacvalueindex SCHEME_CURRENT SUB_NONE CONSOLELOCK 1
 powercfg /setacvalueindex SCHEME_CURRENT SUB_BUTTONS LIDACTION 1
 powercfg /setactive SCHEME_CURRENT
