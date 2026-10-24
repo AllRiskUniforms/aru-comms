@@ -1,10 +1,11 @@
 """Draws Plato's fire-axe mouse pointer and writes fire-axe.cur next to this file.
 
-Pixel art built from simple shapes: a red axe head (steel blade edge, pick on the back)
-on a wooden handle with a black grip, turned so the head sits top-left and the handle
-trails down-right like the normal arrow, with a black outline so it shows on any
-background. The click point (hotspot) is the top of the head. The .cur holds 32, 48 and
-64 px versions so it stays sharp at 100%, 150% and 200% display scaling.
+Built from simple shapes: a red axe head (steel blade edge, pick on the back) on a wooden
+handle with a black grip, turned so the head sits top-left and the handle trails
+down-right like the normal arrow, with a black outline so it shows on any background.
+Each size is drawn at SUPERSAMPLE times and averaged down, so even the tiny 32 px axe
+has smooth edges. The click point (hotspot) is the top of the head. The .cur holds 32,
+48 and 64 px versions for 100%, 150% and 200% display scaling.
 
 Re-run after editing (plain Python 3, nothing to install):  python make-cursors.py
 """
@@ -13,8 +14,9 @@ import os
 import struct
 
 SIZES = (32, 48, 64)
-SCALE = 0.62     # axe size on the 32 px grid; the default Windows arrow is about 12x19 px
+SCALE = 0.31     # axe size on the 32 px grid; the default Windows arrow is about 12x19 px
 ANGLE = math.radians(-45)  # handle pointing down-right
+SUPERSAMPLE = 3
 
 BLACK = (0, 0, 0)
 RED = (205, 25, 25)
@@ -52,26 +54,44 @@ HEAD = (1.5 - min(p[0] for p in _points), 1.5 - min(p[1] for p in _points))
 
 
 def render(size):
-    """Rows of (r, g, b) or None (transparent), size x size pixels."""
-    k = size / 32
+    """Rows of (r, g, b, alpha) or None (transparent), size x size pixels.
+
+    Drawn at SUPERSAMPLE times the size with an outline SUPERSAMPLE pixels thick (1 px
+    once shrunk), then each block of pixels is averaged into one.
+    """
+    ss = SUPERSAMPLE
+    n = size * ss
+    k = n / 32
     c, s = math.cos(ANGLE), math.sin(ANGLE)
-    pixels = []
-    for py in range(size):
+    big = []
+    for py in range(n):
         row = []
-        for px in range(size):
+        for px in range(n):
             gx = ((px + 0.5) / k - HEAD[0]) / SCALE
             gy = ((py + 0.5) / k - HEAD[1]) / SCALE
             row.append(axe_color(gx * c + gy * s, -gx * s + gy * c))  # rotate back into axe units
-        pixels.append(row)
-    outlined = [row[:] for row in pixels]
-    for py in range(size):
-        for px in range(size):
-            if pixels[py][px] is None and any(
-                0 <= py + dy < size and 0 <= px + dx < size and pixels[py + dy][px + dx]
-                for dy in (-1, 0, 1) for dx in (-1, 0, 1)
+        big.append(row)
+    outlined = [row[:] for row in big]
+    for py in range(n):
+        for px in range(n):
+            if big[py][px] is None and any(
+                0 <= py + dy < n and 0 <= px + dx < n and big[py + dy][px + dx]
+                for dy in range(-ss, ss + 1) for dx in range(-ss, ss + 1)
             ):
                 outlined[py][px] = BLACK
-    return outlined
+    pixels = []
+    for y in range(size):
+        row = []
+        for x in range(size):
+            solid = [outlined[y * ss + dy][x * ss + dx] for dy in range(ss) for dx in range(ss)]
+            solid = [p for p in solid if p]
+            if not solid:
+                row.append(None)
+                continue
+            rgb = [sum(p[i] for p in solid) // len(solid) for i in range(3)]
+            row.append((*rgb, round(255 * len(solid) / ss ** 2)))
+        pixels.append(row)
+    return pixels
 
 
 def hotspot(size):
@@ -88,7 +108,7 @@ def cur_image(pixels, size):
     for row in reversed(pixels):
         bits = bytearray(mask_row)
         for x, p in enumerate(row):
-            color += bytes((p[2], p[1], p[0], 255)) if p else bytes(4)
+            color += bytes((p[2], p[1], p[0], p[3])) if p else bytes(4)
             if not p:
                 bits[x // 8] |= 0x80 >> (x % 8)
         mask += bits
