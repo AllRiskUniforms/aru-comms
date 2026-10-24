@@ -23,7 +23,7 @@ body { background: #000; color: var(--green); overflow: hidden; cursor: default;
 
 /* ── Boot / loading ────────────────────────────────────────────────────────── */
 #boot { background: rgba(0,0,0,0.55); flex-direction: column; font-family: "Lucida Console", Consolas, "Courier New", monospace; }
-#boot-text { font-size: clamp(18px, 3vw, 34px); min-height: 1.4em; text-shadow: 0 0 8px var(--green); white-space: pre; }
+#boot-text { font-size: clamp(18px, 3vw, 34px); min-height: 1.4em; text-shadow: 0 0 8px var(--green); white-space: pre-wrap; text-align: center; max-width: 90vw; }
 #boot-text::after { content: "█"; animation: blink 1s steps(1) infinite; margin-left: 2px; }
 @keyframes blink { 50% { opacity: 0; } }
 #loading { margin-top: 28px; width: min(560px, 90vw); font-size: 14px; }
@@ -215,7 +215,7 @@ async function typeLine(text, hold) {
 }
 
 async function boot() {
-  for (const [line, hold] of [['Wake up, Tripp...', 1400], ['The Force has you...', 1400], ['Follow the pink rabbit.', 1200], ['Time to burn it all down.', 1400]]) {
+  for (const [line, hold] of [['Wake up, Tripp...', 1400], ['The Force is all around you and you have two pills to take later...', 1800], ['Follow the pink rabbit.', 1200], ['Time to burn it all down.', 1400]]) {
     await typeLine(line, hold);
     if (skipBoot) break;
   }
