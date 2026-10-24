@@ -1,15 +1,17 @@
 """Draws Plato's mouse pointers and writes them next to this file:
 
-  halligan.cur  the normal pointer: a Halligan bar (adz and pick at the head, long
-                shaft, fork at the far end)
+  ny-hook.cur   the normal pointer: a New York hook (steel head with a spear point and
+                a hook curving back toward the handle, yellow fiberglass handle with a
+                black grip end)
   fire-axe.cur  over links, in place of the hand: a fire axe (red head with a steel
                 blade edge and a pick, wooden handle with a black grip)
 
-Each tool is built from simple shapes, turned so its head sits top-left and the shaft
+Each tool is built from simple shapes, turned so its head sits top-left and the handle
 trails down-right like the normal arrow, with a black outline so it shows on any
 background. Each size is drawn at SUPERSAMPLE times and averaged down, so even the tiny
-32 px versions have smooth edges. The click point (hotspot) is the top of the head.
-Each .cur holds 32, 48 and 64 px versions for 100%, 150% and 200% display scaling.
+32 px versions have smooth edges. The click point (hotspot) is the hook's spear tip and
+the top of the axe head. Each .cur holds 32, 48 and 64 px versions for 100%, 150% and
+200% display scaling.
 
 Re-run after editing (plain Python 3, nothing to install):  python make-cursors.py
 """
@@ -24,7 +26,7 @@ SUPERSAMPLE = 3
 BLACK = (0, 0, 0)
 RED = (205, 25, 25)
 STEEL = (220, 225, 230)
-DARK_STEEL = (150, 156, 164)
+FIBERGLASS = (240, 195, 35)
 WOOD = (200, 150, 75)
 GRIP = (45, 45, 45)
 
@@ -47,29 +49,32 @@ def axe_color(x, y):
     return None
 
 
-def halligan_color(x, y):
-    if abs(x) <= 1.8 and abs(y) <= 2.0:
+def near_segment(x, y, a, b, r0, r1):
+    """Within a stroke from point a to point b whose half-width goes from r0 to r1."""
+    dx, dy = b[0] - a[0], b[1] - a[1]
+    t = max(0.0, min(1.0, ((x - a[0]) * dx + (y - a[1]) * dy) / (dx * dx + dy * dy)))
+    ex, ey = a[0] + t * dx - x, a[1] + t * dy - y
+    return ex * ex + ey * ey <= (r0 + (r1 - r0) * t) ** 2
+
+
+def ny_hook_color(x, y):
+    if -7 <= y <= -2 and abs(x) <= 1.5 * (y + 7) / 5:  # spear point; its tip is the click point
         return STEEL
-    if x < -1.8:  # adz: a flat blade, flaring a little toward its edge
-        t = (-x - 1.8) / 5.5
-        if t <= 1 and -1.4 - 1.0 * t <= y <= 1.4:
-            return STEEL
-    if x > 1.8:  # pick, tapering to a point
-        t = (x - 1.8) / 6.0
-        if t <= 1 and abs(y) <= 1.6 * (1 - t):
-            return STEEL
-    if abs(x) <= 1.3 and 2.0 <= y <= 20:  # shaft
-        return DARK_STEEL
-    if 20 <= y <= 25:  # fork: two tines spreading apart
-        spread = (y - 20) * 0.3
-        if 0.5 + spread <= abs(x) <= 2.0 + spread:
-            return STEEL
+    if -2 <= y <= 0.5 and abs(x) <= 1.6:  # collar where the head meets the handle
+        return STEEL
+    # the hook: out from the side of the head, curving back toward the handle to a sharp tip
+    if (near_segment(x, y, (1.0, -1.6), (4.2, -1.8), 1.2, 1.1)
+            or near_segment(x, y, (4.2, -1.8), (5.8, 0.6), 1.1, 0.9)
+            or near_segment(x, y, (5.8, 0.6), (6.0, 4.6), 0.9, 0.15)):
+        return STEEL
+    if abs(x) <= 1.2 and 0.5 <= y <= 20:
+        return GRIP if y >= 16.5 else FIBERGLASS
     return None
 
 
 # name: (shape, size on the 32 px grid, click point in the tool's own units)
 POINTERS = {
-    'halligan.cur': (halligan_color, 0.38, (0, -2.0)),
+    'ny-hook.cur': (ny_hook_color, 0.40, (0, -7.0)),
     'fire-axe.cur': (axe_color, 0.31, (0, -3.4)),
 }
 

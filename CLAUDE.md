@@ -37,8 +37,8 @@ This repo is **public**: never commit passwords, tokens or customer data.
   on Ferdinand by mistake; `laptop/README.md` has the undo.
 - `laptop/win98-desktop.ps1`: dresses the real desktop as Win98 (RetroBar, teal background,
   My Computer etc., program icons found via `Get-StartApps`). Re-runnable.
-- `laptop/cursors/halligan.cur` (normal pointer) and `fire-axe.cur` (over links, in place
-  of the hand): small 32/48/64 px tools with the hotspot at the top of the head, drawn by
+- `laptop/cursors/ny-hook.cur` (normal pointer; hotspot at the spear tip) and `fire-axe.cur`
+  (over links, in place of the hand; hotspot at the top of the head): small 32/48/64 px tools drawn by
   `laptop/cursors/make-cursors.py` (stdlib only; shapes + supersampling). `win98-desktop.ps1`
   sets them as the Arrow and Hand cursors at the smallest pointer size.
 - `laptop/search-bar.ps1`: a Win98-style search box (WinForms, classic visual styles) on
