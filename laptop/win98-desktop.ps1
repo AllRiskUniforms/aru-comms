@@ -97,8 +97,9 @@ Set-ItemProperty $Wallpapers -Name BackgroundType -Value 1 -Type DWord  # solid 
 [Desk]::SystemParametersInfo(20, 0, '', 3) | Out-Null                     # SPI_SETDESKWALLPAPER: none
 [Desk]::SetSysColors(1, @(1), @(0x808000)) | Out-Null                     # COLOR_DESKTOP = teal (0x00BBGGRR)
 
-Write-Host 'Fire axe mouse pointer, smallest size...'
-Set-ItemProperty 'HKCU:\Control Panel\Cursors' -Name Arrow -Value (Join-Path $PSScriptRoot 'cursors\fire-axe.cur')
+Write-Host 'Halligan bar pointer (fire axe over links), smallest size...'
+Set-ItemProperty 'HKCU:\Control Panel\Cursors' -Name Arrow -Value (Join-Path $PSScriptRoot 'cursors\halligan.cur')
+Set-ItemProperty 'HKCU:\Control Panel\Cursors' -Name Hand -Value (Join-Path $PSScriptRoot 'cursors\fire-axe.cur')
 Set-ItemProperty 'HKCU:\Control Panel\Cursors' -Name CursorBaseSize -Value 32 -Type DWord
 $Access = 'HKCU:\Software\Microsoft\Accessibility'
 if (-not (Test-Path $Access)) { New-Item $Access -Force | Out-Null }
