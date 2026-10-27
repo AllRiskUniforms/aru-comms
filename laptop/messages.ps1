@@ -3,6 +3,8 @@
 # random spot, on top of everything, the ARU 98 lock screen included. Each box stays,
 # through locks, unlocks and restarts, until someone clicks OK or x. Boxes and their
 # places are saved in %LOCALAPPDATA%\ARU98\messages.json.
+# Files come the same way (from send-to-plato.ps1, or attached on the ntfy.sh page): each
+# is saved to Downloads and gets a box with Open and Show in folder. Nothing opens by itself.
 # start-kiosk.cmd starts this hidden at sign-in; starting it again replaces the running copy.
 
 $Config = Join-Path $PSScriptRoot 'messages-config.js'
@@ -40,9 +42,14 @@ $BoldFont = New-Object Drawing.Font('Tahoma', 8.25, [Drawing.FontStyle]::Bold)
 $scale = 1.0
 try { $g = [Drawing.Graphics]::FromHwnd([IntPtr]::Zero); $scale = $g.DpiX / 96.0; $g.Dispose() } catch {}
 function Px($n) { [int][Math]::Round($n * $scale) }
+$Downloads = Join-Path $env:USERPROFILE 'Downloads'
+try { $p = (New-Object -ComObject Shell.Application).NameSpace('shell:Downloads').Self.Path; if ($p) { $Downloads = $p } } catch {}
+# Files of these types run as programs, so their boxes get no Open button.
+$RunnableTypes = '.exe', '.msi', '.bat', '.cmd', '.com', '.scr', '.pif', '.ps1', '.vbs', '.vbe', '.js', '.jse', '.wsf', '.wsh', '.hta', '.lnk', '.reg', '.cpl', '.msc', '.jar'
 
 # ── Saved state ──────────────────────────────────────────────────────────────
-$Pending = [ordered]@{}   # message id -> @{ id; title; text; time; x; y }
+$Pending = [ordered]@{}   # message id -> @{ id; title; text; time; x; y; file }
+$Incoming = [ordered]@{}  # file id -> @{ id; name; size; gz; sha256; from; note; parts; urls; time }
 $Boxes = @{}              # message id -> its window
 $LastId = $null
 $LastCell = -1
@@ -50,11 +57,12 @@ try {
   $saved = Get-Content $StateFile -Raw | ConvertFrom-Json
   $LastId = $saved.lastId
   foreach ($m in @($saved.pending)) { if ($m.id) { $Pending[$m.id] = $m } }
+  foreach ($t in @($saved.incoming)) { if ($t.id) { $Incoming[[string]$t.id] = $t } }
 } catch {}
 
 function Save-State {
   try {
-    [pscustomobject]@{ lastId = $script:LastId; pending = @($script:Pending.Values) } |
+    [pscustomobject]@{ lastId = $script:LastId; pending = @($script:Pending.Values); incoming = @($script:Incoming.Values) } |
       ConvertTo-Json -Depth 4 | Set-Content $StateFile -Encoding UTF8
   } catch {}
 }
@@ -108,6 +116,23 @@ function Close-MessageBox($id) {
   Save-State
   $lock = Get-LockWindow  # hand the keyboard back to the password box
   if ($lock) { [void][Popup]::SetForegroundWindow($lock.MainWindowHandle) }
+}
+
+# A received file's Open and Show in folder buttons. Both also close its box.
+function Open-File($id, $inFolder) {
+  $path = [string]$script:Pending[$id].file
+  Close-MessageBox $id
+  if (-not $path -or -not (Test-Path -LiteralPath $path)) { return }
+  if ($inFolder) { Start-Process explorer.exe "/select,`"$path`"" } else { Invoke-Item -LiteralPath $path }
+}
+
+function New-BoxButton($label, $w, $id, $onClick) {
+  $b = New-Object Windows.Forms.Button
+  $b.Text = $label
+  $b.Tag = $id
+  $b.Size = New-Object Drawing.Size((Px $w), (Px 23))
+  $b.Add_Click($onClick)
+  $b
 }
 
 function Show-MessageBox($m) {
@@ -196,15 +221,21 @@ function Show-MessageBox($m) {
   $sent.Text = 'Sent ' + [DateTimeOffset]::FromUnixTimeSeconds([int64]$m.time).ToLocalTime().ToString('ddd h:mm tt')
   $sent.Location = New-Object Drawing.Point($textLeft, ($text.Bottom + (Px 6)))
 
-  $ok = New-Object Windows.Forms.Button
-  $ok.Text = 'OK'
-  $ok.Tag = $m.id
-  $okTop = [Math]::Max($icon.Bottom, $sent.Top + $sent.PreferredHeight) + (Px 12)
-  $ok.SetBounds([int](($width - (Px 75)) / 2), $okTop, (Px 75), (Px 23))
-  $ok.Add_Click({ param($s) Close-MessageBox $s.Tag })
+  # Buttons, centred: OK, and for a file, Open (not for programs) and Show in folder first.
+  $buttons = @()
+  if ($m.file) {
+    if ([IO.Path]::GetExtension([string]$m.file) -notin $RunnableTypes) {
+      $buttons += New-BoxButton 'Open' 75 $m.id { param($s) Open-File $s.Tag $false }
+    }
+    $buttons += New-BoxButton 'Show in folder' 95 $m.id { param($s) Open-File $s.Tag $true }
+  }
+  $buttons += New-BoxButton 'OK' 75 $m.id { param($s) Close-MessageBox $s.Tag }
+  $top = [Math]::Max($icon.Bottom, $sent.Top + $sent.PreferredHeight) + (Px 12)
+  $left = [int](($width - ($buttons | Measure-Object Width -Sum).Sum - (Px 6) * ($buttons.Count - 1)) / 2)
+  foreach ($b in $buttons) { $b.Location = New-Object Drawing.Point($left, $top); $left += $b.Width + (Px 6) }
 
-  $form.Controls.AddRange(@($bar, $icon, $text, $sent, $ok))
-  $form.Size = New-Object Drawing.Size($width, ($ok.Bottom + (Px 12)))
+  $form.Controls.AddRange(@($bar, $icon, $text, $sent) + $buttons)
+  $form.Size = New-Object Drawing.Size($width, ($top + (Px 23) + (Px 12)))
 
   # Its spot: the saved one, or a fresh random one.
   $area = [Windows.Forms.Screen]::PrimaryScreen.WorkingArea
@@ -245,6 +276,13 @@ function Start-Fetch {
   try { $script:Download = $client.DownloadStringTaskAsync([uri]"https://ntfy.sh/$Topic/json?poll=1&since=$since") } catch {}
 }
 
+function Add-Box($id, $title, $text, $time, $file) {
+  $rec = [pscustomobject]@{ id = $id; title = $title; text = $text; time = $time; x = $null; y = $null; file = $file }
+  $script:Pending[$id] = $rec
+  Show-MessageBox $rec
+  Save-State
+}
+
 function Receive-Fetch {
   $d = $script:Download
   if (-not $d -or -not $d.IsCompleted) { return }
@@ -252,20 +290,127 @@ function Receive-Fetch {
   if ($d.IsFaulted -or $d.IsCanceled) { return }
   foreach ($m in @(Read-Messages $d.Result)) {
     $script:LastId = $m.id
+    if ($m.attachment -and (Add-FilePart $m)) { continue }
     if ($script:Pending.Contains($m.id)) { continue }
     $text = [string]$m.message
-    $rec = [pscustomobject]@{
-      id = $m.id
-      title = $(if ($m.title) { [string]$m.title } else { 'Message' })
-      text = $text.Substring(0, [Math]::Min(2000, $text.Length))
-      time = [int64]$m.time
-      x = $null
-      y = $null
-    }
-    $script:Pending[$m.id] = $rec
-    Show-MessageBox $rec
+    $title = if ($m.title) { [string]$m.title } else { 'Message' }
+    Add-Box $m.id $title ($text.Substring(0, [Math]::Min(2000, $text.Length))) ([int64]$m.time) $null
   }
   Save-State
+}
+
+# ── Files ────────────────────────────────────────────────────────────────────
+# ntfy.sh takes attachments of up to 2 MB and deletes them after 3 hours. send-to-plato.ps1
+# gzips a file when that helps and sends it in parts of under 2 MB, each with the message
+# "aru98-file {id, part, parts, name, size, gz, sha256, from}". A file attached on the
+# ntfy.sh page arrives as one plain attachment instead, maybe with a note. Once all of a
+# file's parts are listed, they're downloaded one at a time (in the background, like the
+# fetch), joined, unzipped, checked and saved to Downloads.
+$fileClient = New-Object Net.WebClient
+$script:FileJob = $null
+
+# $true if $m was part of a file. Anything else with an attachment shows as a plain message.
+function Add-FilePart($m) {
+  $url = [string]$m.attachment.url
+  if ($url -notlike 'https://ntfy.sh/file/*') { return $false }  # files uploaded to ntfy.sh only, never links elsewhere
+  $text = [string]$m.message
+  if ($text.StartsWith('aru98-file ')) {
+    try { $meta = $text.Substring(11) | ConvertFrom-Json } catch { return $false }
+  } else {
+    $note = if ($text -notlike 'You received a file:*') { $text.Substring(0, [Math]::Min(1000, $text.Length)) } else { '' }
+    $meta = [pscustomobject]@{ id = $m.id; part = 1; parts = 1; name = $m.attachment.name; size = $m.attachment.size; gz = $false; sha256 = ''; from = $m.title; note = $note }
+  }
+  $parts = [int]$meta.parts
+  $part = [int]$meta.part
+  if (-not $meta.id -or $parts -lt 1 -or $parts -gt 40 -or $part -lt 1 -or $part -gt $parts) { return $false }
+  $t = $script:Incoming[[string]$meta.id]
+  if (-not $t) {
+    $t = [pscustomobject]@{
+      id = [string]$meta.id; name = [string]$meta.name; size = [int64]$meta.size; gz = [bool]$meta.gz; sha256 = [string]$meta.sha256
+      from = [string]$meta.from; note = [string]$meta.note; parts = $parts; urls = [object[]]::new($parts); time = 0
+    }
+    $script:Incoming[$t.id] = $t
+  }
+  if ($part -le @($t.urls).Count) { $t.urls[$part - 1] = $url }
+  $t.time = [int64]$m.time
+  $true
+}
+
+function Step-Files {
+  $job = $script:FileJob
+  if ($job) {
+    if (-not $job.Task.IsCompleted) { return }
+    if ($job.Task.IsFaulted -or $job.Task.IsCanceled) { $script:FileJob = $null; Stop-File $job.File; return }
+    $bytes = $job.Task.Result
+    $job.Data.Write($bytes, 0, $bytes.Length)
+    $job.Index = $job.Index + 1
+    if ($job.Index -lt $job.File.parts) {
+      try { $job.Task = $fileClient.DownloadDataTaskAsync([uri]$job.File.urls[$job.Index]) } catch { $script:FileJob = $null; Stop-File $job.File }
+      return
+    }
+    $script:FileJob = $null
+    Save-File $job.File $job.Data.ToArray()
+    return
+  }
+  $now = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
+  foreach ($t in @($script:Incoming.Values)) {
+    $missing = 0
+    foreach ($u in $t.urls) { if (-not $u) { $missing++ } }
+    if ($missing -eq 0) {
+      try { $script:FileJob = @{ File = $t; Index = 0; Data = (New-Object IO.MemoryStream); Task = $fileClient.DownloadDataTaskAsync([uri]$t.urls[0]) } }
+      catch { Stop-File $t }
+      return
+    }
+    # Some parts never came, and ntfy.sh has deleted the rest by now. The sender was told.
+    if ($now - $t.time -gt 3 * 3600) { $script:Incoming.Remove($t.id); Save-State }
+  }
+}
+
+function Get-FileTitle($t) { if ($t.from) { "File from $($t.from)" } else { 'File' } }
+
+function Format-Size($n) {
+  if ($n -ge 1MB) { '{0:0.0} MB' -f ($n / 1MB) } elseif ($n -ge 1KB) { '{0:0} KB' -f ($n / 1KB) } else { "$n bytes" }
+}
+
+function Stop-File($t) {
+  $script:Incoming.Remove($t.id)
+  Add-Box "file-$($t.id)" (Get-FileTitle $t) "$($t.name) didn't come through. Files wait on ntfy.sh for only 3 hours, so send it again." ([int64]$t.time) $null
+}
+
+# Downloads\<name>, or <name> (2) etc. if that's taken. The name is the sender's, so it's cleaned up first.
+function Get-FreePath($name) {
+  $name = ([string]$name -split '[\\/]')[-1]
+  foreach ($c in [IO.Path]::GetInvalidFileNameChars()) { $name = $name.Replace([string]$c, '_') }
+  $name = $name.Trim(' .')
+  if (-not $name) { $name = 'file' }
+  $ext = [IO.Path]::GetExtension($name)
+  $base = $name.Substring(0, $name.Length - $ext.Length)
+  if ($base.Length -gt 100) { $base = $base.Substring(0, 100) }
+  $path = Join-Path $Downloads "$base$ext"
+  for ($n = 2; Test-Path -LiteralPath $path; $n++) { $path = Join-Path $Downloads "$base ($n)$ext" }
+  $path
+}
+
+function Save-File($t, [byte[]]$data) {
+  try {
+    if ($t.gz) {
+      $gz = [IO.Compression.GZipStream]::new([IO.MemoryStream]::new($data), [IO.Compression.CompressionMode]::Decompress)
+      $out = New-Object IO.MemoryStream
+      $gz.CopyTo($out)
+      $gz.Dispose()
+      $data = $out.ToArray()
+    }
+    $hash = -join ([Security.Cryptography.SHA256]::Create().ComputeHash($data) | ForEach-Object { $_.ToString('x2') })
+    if ($t.sha256 -and $hash -ne $t.sha256) { throw 'damaged on the way' }
+    $path = Get-FreePath $t.name
+    [IO.File]::WriteAllBytes($path, $data)
+    # Marked as from the internet, as a browser download would be, so Windows warns before running it.
+    try { Set-Content -LiteralPath $path -Stream Zone.Identifier -Value "[ZoneTransfer]`r`nZoneId=3" } catch {}
+  } catch { Stop-File $t; return }
+  $script:Incoming.Remove($t.id)
+  $text = "$([IO.Path]::GetFileName($path)) ($(Format-Size $data.Length))`r`nSaved in Downloads."
+  if ($t.note) { $text = "$($t.note)`r`n`r`n$text" }
+  Add-Box "file-$($t.id)" (Get-FileTitle $t) $text ([int64]$t.time) $path
 }
 
 # One timer, every half second: pick up finished downloads, start a new one every 10 s
@@ -277,6 +422,7 @@ $timer.Interval = 500
 $timer.Add_Tick({
   try {
     Receive-Fetch
+    Step-Files
     if ($script:Ticks % 20 -eq 0) { Start-Fetch }
     if ($script:Ticks % 2 -eq 0) { foreach ($f in @($script:Boxes.Values)) { [Popup]::KeepOnTop($f.Handle) } }
   } catch {}

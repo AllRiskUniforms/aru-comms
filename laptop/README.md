@@ -86,6 +86,32 @@ title bar to move it.
   The title becomes the window's title.
 - Messages pass through ntfy.sh, a public service. Don't send passwords or private details.
 
+## Send files to Plato
+
+Files go through the same private channel as messages, no email needed. On Plato each file
+lands in **Downloads**, exactly as sent (Plato checks), and a Windows 98 box pops up with
+**Open**, **Show in folder** and **OK**.
+Nothing opens by itself, and programs (`.exe` and the like) get no Open button.
+
+**One-time setup on the sending computer (Ferdinand), not on Plato.** In PowerShell, with
+Plato's channel in place of `<channel>`:
+
+```powershell
+$env:ARU_TOPIC='<channel>'; $env:ARU_FROM='Ferdinand'; irm https://raw.githubusercontent.com/AllRiskUniforms/aru-comms/main/laptop/setup-sender.ps1 | iex
+```
+
+That adds **Plato** to the right-click **Send to** menu (on Windows 11, click **Show more
+options** first) and a **Send to Plato** icon on the desktop that you can drop files on.
+
+- **Size:** up to about 18 MB at a time; ntfy.sh holds 20 MB per sender for 3 hours. Files
+  are zipped on the way when that makes them smaller, so LightBurn designs fit easily.
+  Use a USB stick for anything bigger.
+- **Without the setup**, from any browser or phone: open `https://ntfy.sh/<channel>`,
+  attach the file in the message box, and send. That way is limited to 2 MB a file.
+- Plato must pick the file up within 3 hours, when ntfy.sh deletes it. It's always on,
+  so it gets it in about 10 seconds. If one doesn't come through, Plato says so; send it again.
+- Like messages, files pass through ntfy.sh. Don't send anything private.
+
 ## The Windows 98 desktop (`win98-desktop.ps1`)
 
 The real Windows desktop, dressed as Windows 98, so every icon opens the real program or folder:
@@ -134,7 +160,8 @@ profile, so LightBurn on Plato still asks you to set up a device. Copy the whole
 2. In case Export Prefs leaves out the device, also open the **Laser** window → **Devices**,
    select your laser → **Export**, and save `Ferdinand.lbdev`.
 3. If you use a material library: **Library** window → **Save As** → `Ferdinand.clb`.
-4. Put the files on a USB stick or in Google Drive. Email works too: attach them as files.
+4. Right-click the files → **Send to** → **Plato** (see "Send files to Plato" above). They
+   land in Plato's Downloads folder. A USB stick works too.
 
 **On Plato:**
 

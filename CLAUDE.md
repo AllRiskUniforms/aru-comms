@@ -37,7 +37,19 @@ This repo is **public**: never commit passwords, tokens or customer data.
   (with their spots and the last id) until OK/x, across locks and restarts. Started by
   `start-kiosk.cmd`. The topic is in `laptop/messages-config.js`, gitignored and created
   by setup, because anyone who knows it can send. (An earlier version drew the boxes
-  inside `lock.html`, but those vanished on unlock.)
+  inside `lock.html`, but those vanished on unlock.) It also receives files: an
+  ntfy attachment (only from `https://ntfy.sh/file/`) is downloaded, saved to Downloads
+  (name cleaned, `name (2)` if taken, marked Zone 3), and gets a box with Open (not for
+  .exe etc.) / Show in folder / OK. Half-received files persist in `messages.json` too.
+- `laptop/send-to-plato.ps1`: the sending side, on Ferdinand (emailing LightBurn files to
+  Plato didn't work for the user). ntfy.sh allows 2 MB per attachment, 20 MB per
+  sender, kept 3 hours, so it gzips when smaller and PUTs parts of 1.9 MB, each with the
+  message `aru98-file {id, part, parts, name, size, gz, sha256, from}`; `messages.ps1`
+  joins, gunzips and checks the hash. A plain attachment from the ntfy.sh page works too.
+  Settings live in `%LOCALAPPDATA%\ARU98\send-to-plato.json` on the sender.
+- `laptop/setup-sender.ps1`: one-time sender setup (`$env:ARU_TOPIC`, `$env:ARU_FROM`,
+  `irm … | iex`, so no `exit`): downloads `send-to-plato.ps1` to `%LOCALAPPDATA%\ARU98`,
+  and adds a "Plato" Send To entry and a "Send to Plato" desktop drop target.
 - `laptop/setup-laptop.ps1`: one-time Plato setup (power settings; winget installs of Git,
   Node.js, Chrome, Claude app, RetroBar; Claude Code; clone; Desktop Commander for the
   Claude app and Claude Code; Win98 desktop; Startup shortcut). Runs via `irm … | iex`, so
